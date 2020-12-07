@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 
@@ -16,16 +15,6 @@ class LCD_Dimmer {
 
   public:
     LCD_Dimmer(LiquidCrystal_I2C *lcd, int initialBrightness, BaseType_t xCoreID=defaultCore, int priority=defaultTaskPriority);
-=======
-const int PWM_period = 50;
-const int PWM_steps = 11; 
-const int PWM_factor = 2;
-
-class LCD_Dimmer { 
-
-  public:
-    LCD_Dimmer(int initialBrightness, BaseType_t xCoreID=0, int priority=1);
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
     void enable();
     void disable();
     ~LCD_Dimmer();
@@ -39,10 +28,7 @@ class LCD_Dimmer {
     int getPeriod();
   
   private:              
-<<<<<<< HEAD
     LiquidCrystal_I2C *_lcd;
-=======
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
     BaseType_t _xCoreID;        // coreid
     int _priority;              // task priority
     int _brightness;               
@@ -50,18 +36,11 @@ class LCD_Dimmer {
     TaskHandle_t _taskHandle;   
     void dimmerTask();          // LCD dimming method
     static void s_dimmerTask(void* parameter);  // task callback function
-<<<<<<< HEAD
     
 };
 
 // ctor
 LCD_Dimmer::LCD_Dimmer(LiquidCrystal_I2C *lcd,int initialBrightness, BaseType_t xCoreID, int priority) : _lcd(lcd), _xCoreID(xCoreID), _priority(priority), _period(this->getPeriod()), _brightness(this->setBrightness(initialBrightness)) {
-=======
-};
-
-// ctor
-LCD_Dimmer::LCD_Dimmer(int initialBrightness, BaseType_t xCoreID, int priority) : _xCoreID(xCoreID), _priority(priority), _period(this->getPeriod()), _brightness(this->setBrightness(initialBrightness)) {
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
     xTaskCreatePinnedToCore(s_dimmerTask, "LCD_Dimmer", 4000, this,_priority, &_taskHandle, _xCoreID);
 }
 
@@ -111,21 +90,12 @@ inline int LCD_Dimmer::setBrightness(int brightness) {
 
 inline int LCD_Dimmer::getBrightness() {
   return _brightness+1;
-<<<<<<< HEAD
 }
 
 inline int LCD_Dimmer::getMaxBrightness() {
   return PWM_steps-1;
 }
 
-=======
-}
-
-inline int LCD_Dimmer::getMaxBrightness() {
-  return PWM_steps-1;
-}
-
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
 inline int LCD_Dimmer::getMinBrightness() {
   return 0;
 }
@@ -141,7 +111,6 @@ void LCD_Dimmer::dimmerTask() {
     int offTime=this->getPeriod()-this->getPWM(this->getBrightness());
     int onTime=this->getPeriod()-offTime;
     
-<<<<<<< HEAD
     //Serial.printf("*** Dimmertask *** in core %i - Brightness: %i - On: %i - Off: %i\n",xPortGetCoreID(), this->getBrightness(), onTime, offTime);
 
     _lcd->backlight();
@@ -150,14 +119,6 @@ void LCD_Dimmer::dimmerTask() {
     _lcd->noBacklight();
     delay(offTime);
     
-=======
-    Serial.printf("*** Dimmertask *** in core %i - Brightness: %i - On: %i - Off: %i\n",xPortGetCoreID(), this->getBrightness(), onTime, offTime);
-
-    // Serial.println("On");
-    delay(onTime);
-    // Serial.println("Off");
-    delay(offTime);
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
   }
 }
 
@@ -170,7 +131,6 @@ void setup() {
   Serial.begin(115200);  
   
   Serial.printf("%s - %i\n","@@@ Setup @@@",xPortGetCoreID());
-<<<<<<< HEAD
 
   lcd.begin();
   lcd.clear();
@@ -181,15 +141,10 @@ void setup() {
 
   lcdDimmer= new LCD_Dimmer(&lcd,0); // start with dark display
 
-=======
-  
-  lcdDimmer= new LCD_Dimmer(0); // start with dark display
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
 }
 
 void loop() {
 
-<<<<<<< HEAD
   delay(1000);
 
   Serial.printf("%s - %i - Brighntess: %i\n","@@@ Loop @@@",xPortGetCoreID(), i); 
@@ -199,11 +154,6 @@ void loop() {
   lcd.printf("Dim: %i",i);
 */
 
-=======
-  Serial.printf("%s - %i - Brighntess: %i\n","@@@ Loop @@@",xPortGetCoreID(), i); 
-  delay(100);
-
->>>>>>> b5f2952558f02c9bf6de4216a9a45edbe2b9d9a7
   i+=inc;  
   if ( i > lcdDimmer->getMaxBrightness() || i < lcdDimmer->getMinBrightness() ) {
     inc=-inc;
