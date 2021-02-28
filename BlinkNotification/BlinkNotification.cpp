@@ -1,11 +1,43 @@
+// -------------------------------------------------------------------------------------------------------------
+// Simple class to create LED blink notifications with a blink pattern string which can include "-", "." and " "
+// -------------------------------------------------------------------------------------------------------------
+
+/*
+#######################################################################################################################
+#
+#    Copyright (c) 2021 framp at linux-tips-and-tricks dot de
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#######################################################################################################################
+*/
+
 #include "BlinkNotification.h"
 
 namespace framp {
 
-BlinkNotification::BlinkNotification(uint8_t gpio, int blinkPeriod) :
-  loopEndless(false),
+BlinkNotification::BlinkNotification(uint8_t gpio, unsigned blinkPeriod, std::string blinkPattern, unsigned repeatCount, unsigned delayTime ) :
   gpio(gpio),
-  blinkPeriod(blinkPeriod) {
+  repeatCount(repeatCount),
+  blinkPattern(blinkPattern),
+  blinkPeriod(blinkPeriod),
+  delayTime(delayTime),
+  active(false),
+  blinkOffset(0) {
+    pinMode(this->gpio, OUTPUT);
+    digitalWrite(this->gpio, HIGH);       // make sure LED is off
+    this->LEDStateOn = false;
 }
 
 void BlinkNotification::flipLED() {
@@ -17,7 +49,7 @@ void BlinkNotification::flipLED() {
     if ( this->LEDStateOn && this->onTime > 0) {
       digitalWrite(this->gpio, LOW);
       this->LEDStateOn = false;
-      this->ticker.once_ms(this->onTime, std::bind(&BlinkNotification::flipLED, this));
+      this->ticker.once_ms(this->onTime, [this]() { this-> flipLED(); });
       return;
     }
 
@@ -30,10 +62,14 @@ void BlinkNotification::flipLED() {
     // move on to next char
     this->blinkOffset++;
 
+    int loopEndDelay=0;
+    
     // terminate repeats if requested
     if ( this->blinkOffset > this->blinkPattern.length() - 1 ) { // char sequence processed, move on to next repeat
+      loopEndDelay = this->delayTime;
       if ( ! this-> loopEndless ) {
         if (--this->repeatCount <= 0 ) { 
+          this->stop();
           return;                       // terminate LED flip flop if number of repeats executed
         }
       }
@@ -41,7 +77,7 @@ void BlinkNotification::flipLED() {
     }
 
     this->setBlinkTimes(this->blinkPattern[this->blinkOffset]);
-    this->ticker.once_ms(this->offTime, std::bind(&BlinkNotification::flipLED, this));
+    this->ticker.once_ms(this->offTime + loopEndDelay, [this]() { this-> flipLED(); });
 
   }
 }
@@ -63,40 +99,25 @@ void BlinkNotification::setBlinkTimes(char c) {
 
 }
 
-void BlinkNotification::setup () {
-  pinMode(this->gpio, OUTPUT);
-  digitalWrite(this->gpio, HIGH);       // make sure LED is off
-  this->LEDStateOn = false;
-}
-
-void BlinkNotification::start (std::string blinkPattern, unsigned repeat) {
-
-  this->loopEndless = repeat == -1;
-  this->repeatCount = repeat;
-
-  this->blinkPattern = blinkPattern;
-  this->blinkOffset = 0;
+void BlinkNotification::start () {
 
   this->setBlinkTimes(this->blinkPattern[this->blinkOffset]);
+  this->loopEndless = this-> repeatCount == -1;
+  if ( this->loopEndless ) {
+    this->repeatCount = 1;
+  }
 
   digitalWrite(this->gpio, HIGH);       // make sure LED is off
   this->LEDStateOn = true;
-
+  this->active = true;
   this->flipLED();
-
 }
 
-void BlinkNotification::stop () {
-  this->repeatCount = 1;                // finish current loop
-  this->loopEndless = false;            // disable endless loop
-  digitalWrite(this->gpio, HIGH);       // make sure LED is off
-  this->LEDStateOn = false;
-}
-
-void BlinkNotification::stopForce () {
+void BlinkNotification::stop() {
   this->ticker.detach();
   digitalWrite(this->gpio, HIGH);       // make sure LED is off
   this->LEDStateOn = false;
+  this->active = false;
 }
 
 }
