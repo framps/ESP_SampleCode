@@ -2,6 +2,8 @@
 // Simple class to create LED blink notifications with a blink pattern string which can include "-", "." and " "
 // -------------------------------------------------------------------------------------------------------------
 
+// Thank you __deets__ for your valuable help and feedback 
+
 /*
 #######################################################################################################################
 #

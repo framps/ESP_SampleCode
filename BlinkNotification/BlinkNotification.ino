@@ -2,6 +2,8 @@
 // Sample how to use class BlinkNotification
 // -------------------------------------------------------------------------------------------------------------
 
+// Thank you __deets__ for your valuable help and feedback 
+
 /*
 #######################################################################################################################
 #
@@ -33,28 +35,37 @@ void setError() {
   errorOccured = true;
 }
 
-BlinkNotification activity(BUILTIN_LED,250,".",-1);                    // active blink pattern to signal ESP is active working, executed forever
-BlinkNotification sos(BUILTIN_LED,500,"... --- ...   ",3);             // error blink pattern to signal an error condition, execute three times 
+// active blink pattern to signal ESP is active working, no default
+BlinkNotification activity(BUILTIN_LED,             // LED to blink, no default
+                            250,                    // period length of one LED blink in ms, default is 1000 ms
+                            "-.",                   // blink pattern, default is "."
+                            -1,                     // repeat loop 10 times, default is 0, use -1 for an endless loop
+                            10) ;                   // delay in ms at end of pattern, default is 0
+
+// signal some error condition and blink 10 times
+BlinkNotification error(BUILTIN_LED,50,".",100,10); 
+
+// error blink pattern to signal an error condition, executed forever
+BlinkNotification sos(BUILTIN_LED,500,"... --- ...   ",-1);
  
 void setup() {
   
-  Serial.begin(115200);
-  Serial.println();
+  activity.start();                                 // start blink activity pattern to simulate some activity
   
-  activity.start();                                 // start blink activity pattern
-
   createError.once_ms(10000, setError);             // simulate error in 10 seconds
 
 }
 
 void loop() {  
 
-  if ( errorOccured ) {
+  if ( errorOccured ) {    
     activity.stop();                                // terminate blink activity  
     errorOccured = false;                           // don't execute this error path any more
-    delay(3000);                                    // separate blink patterns from each other
-    
+    error.start();                                  // signal some error condition
+    while (error.isActive()) {                      // wait until error condition is gone
+      delay(100);
+    }
+    delay(1000);                                    // simmulate error handling
     sos.start();                                    // blink the error pattern (SOS) three times
-  }
-    
+  }    
 }
