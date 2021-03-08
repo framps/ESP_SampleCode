@@ -1,18 +1,14 @@
 #include "TempHumSensor.h"
 
-#define DHTPIN 12 // D2 is GPIO 4
-#define DHTPower 15 // D8
-#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-
-DHT22Sensor::DHT22Sensor() : dht(DHTPIN, DHTTYPE) {
+DHT22Sensor::DHT22Sensor(uint8_t pin, uint8_t type, uint8_t powerPin) : dht(pin, type, powerPin), powerPin(powerPin) {
 }
 
 int DHT22Sensor::start() {
 
-  pinMode(DHTPower,OUTPUT);     //DHT POWER PIN +5V
+  pinMode(this->powerPin,OUTPUT);     //DHT POWER PIN +5V
 
   Serial.println("Enable DHT");
-  digitalWrite(DHTPower,HIGH);
+  digitalWrite(this->powerPin,HIGH);
 
   delay(10);
   dht.begin();
@@ -28,17 +24,15 @@ int DHT22Sensor::poll(Sensor::Data& polledData) {
   return 0;
 }
 
-#define BMEPower 15 // D8
-
-BME280Sensor::BME280Sensor() : bme() {
+BME280Sensor::BME280Sensor(uint8_t powerPin) : bme(), powerPin(powerPin) {
 }
 
 int BME280Sensor::start() {
 
-  pinMode(BMEPower,OUTPUT);     // BME POWER PIN +5V
+  pinMode(this->powerPin,OUTPUT);     // BME POWER PIN +5V
 
   Serial.println("Enable BME");
-  digitalWrite(BMEPower,HIGH);
+  digitalWrite(this->powerPin,HIGH);
 
   Wire.begin();
 

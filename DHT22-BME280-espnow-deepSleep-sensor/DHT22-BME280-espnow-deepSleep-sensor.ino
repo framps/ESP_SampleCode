@@ -1,13 +1,20 @@
-#include "./TempHumSensor.h"
+#include "TempHumSensor.h"
 
 Sensor *s;
+
+#define DHTPIN 12               // D2 is GPIO 4
+#define DHTPower 15             // Vcc power pin D8
+#define DHTTYPE DHT22           // DHT 22  (AM2302), AM2321
+#define BMEPower DHTPower       // Vcc power pin D8 
 
 void setup() {
 
     Serial.begin(115200);
     Serial.println("... setup ...");
 
-    BME280Sensor *bs = new BME280Sensor;
+    // Check whether BMD280 sensor is available
+
+    BME280Sensor *bs = new BME280Sensor(BMEPower);
 
     if (bs->start() == 0) {
         Serial.println("Using BME280");
@@ -19,7 +26,9 @@ void setup() {
       delete bs;
       bs = NULL;
 
-      DHT22Sensor *ds = new DHT22Sensor;
+      // Fall back to DHT22 sensor
+
+      DHT22Sensor *ds = new DHT22Sensor(DHTPIN, DHTTYPE, DHTPower);
 
       if (ds->start() == 0) {
           Serial.println("Using DHT22");
