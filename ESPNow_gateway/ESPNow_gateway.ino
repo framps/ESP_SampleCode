@@ -31,16 +31,14 @@
 #include <MQTTClient.h>
 #include <jled.h>
 
-#define CHANNEL 1                       // channel of WLAN_AP
+#define CHANNEL 1                       // channel of WLAN_AP, hast to be identical to channel used by sensors
 #define LED_GREEN 18                    // green LED signals some data received from an ESPnow sensor
 #define LED_RED 23                      // red LED signals no connection to home network to forward received data
 
-#define KEEP_ALIVE 90                   // seconds
-
-#define WLAN_AP "Framp-IOT"             // local AP the received data will be sent to, hast to have channel 1
+#define WLAN_AP "Framp-IOT"             // local AP the received data will be sent to, has to have channel defined above
 #define WLAN_AP_PWD "Pmarf-IOT"
 
-#define WLAN_GW "Framp-IOT-GW"          // AP created by gateway for sensors, will be channel 1
+#define WLAN_GW "Framp-IOT-GW"          // AP created by gateway for sensors, will use same channel as WLAN_AP
 #define WLAN_GW_PWD "Pmarf-IOT-GW"
 
 #define BROKERIP "192.168.0.42"         // IP of MQTT broker the data will be sent to
@@ -50,18 +48,14 @@ union RECEIVED_DATA {
     uint8_t buffer[sizeof(SENSOR_DATA)];
 };
 
-/** MQTT client class to access mqtt broker */
+// MQTT definitions
 MQTTClient mqttClient(2560);
-/** MQTT broker URL */
 static const char * mqttBroker = BROKERIP;
-/** MQTT connection id */
 static const char * mqttID = "Gateway";
-/** MQTT user name */
 static const char * mqttUser = "";
-/** MQTT password */
 static const char * mqttPwd = "";
-/** WiFi client class to receive messages from mqtt broker */
-WiFiClient mqttReceiver;
+// WifiCLient used to send MQTT messages
+WiFiClient mqttSender;
 
 auto ledGreen = JLed(LED_GREEN).Breathe(2000).DelayAfter(1000);
 
@@ -78,7 +72,7 @@ void InitESPNow() {
   }
 }
 
-// config AP SSID
+// configure AP for sensors
 void configDeviceAP() {
   String Prefix = WLAN_GW;
   String Mac = WiFi.macAddress();
@@ -93,6 +87,7 @@ void configDeviceAP() {
 }
 
 void setup() {
+
   Serial.begin(115200);
 
   pinMode(LED_RED, OUTPUT);
@@ -106,14 +101,13 @@ void setup() {
   //Set device in AP mode to begin with
   WiFi.mode(WIFI_AP_STA);
   WiFi.begin(WLAN_AP, WLAN_AP_PWD);
-  // configure device AP mode
+  // configure AP for sensors
   configDeviceAP();
-  // This is the mac address of the Slave in AP Mode
+  // This is the mac address of the gateway used by sensors
   Serial.print("AP MAC: "); Serial.println(WiFi.softAPmacAddress());
 
   // Start connection to MQTT broker
-  // Connect to MQTT broker
-  mqttClient.begin(mqttBroker, mqttReceiver);
+  mqttClient.begin(mqttBroker, mqttSender);
 
   Serial.println("Connecting to MQTT broker");
 
@@ -131,15 +125,14 @@ void setup() {
 
   // Init ESPNow with a fallback logic
   InitESPNow();
-  // Once ESPNow is successfully Init, we will register for recv CB to
-  // get recv packer info.
+  // Register to receive sensor ESPNow messages
   esp_now_register_recv_cb(OnDataRecv);
 
   digitalWrite(LED_RED, LOW);    // turn the LED off by making the voltage LOW
 
 }
 
-// callback when data is recv from Master
+// callback when data is recv from sensors
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   ledGreen.Reset();
   char macStr[18];
