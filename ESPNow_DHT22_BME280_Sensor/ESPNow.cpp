@@ -19,7 +19,9 @@
 #######################################################################################################################
 */
 
-// Latest code available on https://github.com/framps/ESP_stuff/tree/main/DHT22-BME280-espnow-deepSleep-sensor
+// Latest code available on https://github.com/framps/ESP_stuff/tree/main/ESPNow_DHT22_BME280_Sensor
+
+#include "TempHumSensor.h"
 
 #include "ESPNow.h"
 #include <ESP8266WiFi.h>
@@ -29,9 +31,9 @@ extern "C" {
 
 ESPNow::ESPNow(uint8_t* gatewayMac, int wifiChannel, int sleepTime, int sendTimeout) : gatewayMac(gatewayMac), wifiChannel(wifiChannel), sleepTime(sleepTime), sendTimeout(sendTimeout), dataSent(false) { };
 
-int ESPNow::initialize() { 
+int ESPNow::initialize() {
 
-  ESPNow::instance = this;
+  ESPNow::instance = this;            // make instance accessible as singleton
   WiFi.mode(WIFI_STA);                // Station mode for sensor
   WiFi.begin();
   Serial.print("Mac address of sensor: "); Serial.println(WiFi.macAddress());
@@ -42,7 +44,7 @@ int ESPNow::initialize() {
     ESP.restart();
   }
 
-  delay(10); 
+  delay(10);
 
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_add_peer(this->gatewayMac, ESP_NOW_ROLE_SLAVE, this->wifiChannel, NULL, 0);
@@ -53,18 +55,18 @@ int ESPNow::initialize() {
     char macString[50] = {0};
     sprintf(macString, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     Serial.println(macString);
-    ESPNow::instance->dataSent=true;
+    ESPNow::instance->dataSent = status == 0;     // hack to access dataSent boolean from ESPNow callback function
   });
 }
 
-int ESPNow::send(Sensor::Data &polledData) { 
+int ESPNow::send(Sensor::Data &polledData) {
 
     Serial.print("send, hum="); Serial.println(polledData.hum);
     Serial.print("send, temp="); Serial.println(polledData.temp);
-  
+
     u8 bs[sizeof(polledData)];
     memcpy(bs, &polledData, sizeof(polledData));
-    esp_now_send(NULL, bs, sizeof(bs)); 
+    esp_now_send(NULL, bs, sizeof(bs));
 
     int rc = this->waitForCompletion();
     this->dataSent = false;
@@ -78,7 +80,7 @@ int ESPNow::waitForCompletion() {
   return this->dataSent;
 }
 
-void ESPNow::shutdown() { 
+void ESPNow::shutdown() {
     Serial.print("Going to sleep, uptime: "); Serial.println(millis());
     ESP.deepSleep(this->sleepTime, WAKE_RF_DEFAULT);
     delay(100);       // give ESP time to complete shutdown

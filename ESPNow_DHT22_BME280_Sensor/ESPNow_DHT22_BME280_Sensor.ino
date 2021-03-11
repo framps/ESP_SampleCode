@@ -2,11 +2,12 @@
 // Sample sketch which uses either a BME280 or DHT22 sensor and sends the sensed
 // data via ESPNow to an ESPNow gateway. Deep sleep is used to minimze
 // current usage. For both sensors an additional GPIO can be used to turn off and on
-// power pin to save more current. 
+// Vcc to save more power.
 //
 // Don't forget to connect GPIO16 with RST. Otherwise there will be no deep sleep wakeup
 //
-// Latest code available on https://github.com/framps/ESP_stuff/tree/main/DHT22-BME280-espnow-deepSleep-sensor
+// Latest code available on https://github.com/framps/ESP_stuff/tree/main/ESPNow_DHT22_BME280_Sensor
+// Corresponding ESPNow gateway code is available on https://github.com/framps/ESP_stuff/tree/main/ESPNow_gateway
 //
 
 /*
@@ -30,34 +31,51 @@
 #######################################################################################################################
 */
 
+/*
+19:50:25.260 -> Enable DHT
+19:50:26.253 -> Initialized DHT22
+19:50:26.253 -> Mac address of sensor: 10:52:1C:02:44:C7
+19:50:26.253 -> ... loop ...
+19:50:26.286 -> Temp: 40.000000, Hum: 18.000000
+19:50:26.286 -> send, hum=40.00
+19:50:26.286 -> send, temp=18.00
+19:50:26.286 -> send_cb, status = 0, to mac: 10:52:1C:5D:5C:9D
+19:50:26.286 -> Going to sleep, uptime: 1087
+*/
+
 #include "TempHumSensor.h"
 #include "ESPNow.h"
 
-#define DHTPIN 12               // D2 is GPIO 4
-#define DHTPower 15             // Vcc power pin D8
-#define DHTTYPE DHT22           // DHT 22  (AM2302), AM2321
-#define BMEPower DHTPower       // Vcc power pin D8 
+#define DHTPIN 12               // GPIO used to retrieve DHT sensor data
+#define POWERPIN 15             // Vcc power pin, used to turn off Vcc of sensors before deep sleep starts and
+                                // to turn on when woken up from deep sleep
 
-// #define BME280 // otherwise DHT22 is assumed
-
+// mac of ESPNow gateway
 uint8_t gatewayMac[] = { 0x10, 0x52, 0x1C, 0x5D, 0x5C, 0x9D};
+
+// to use BME280 sensor uncomment following define
+// to use DHT22 sensor comment out following define
+// #define BME280_SENSOR
 
 Sensor *s = NULL;
 
+// ESPNow has following default values:
+// wifiChannel:  1, NOTE: wifiChannel has to be constant all the time and doesn't float
+// deep sleep time: 60 seconds
+// ESPNow send timeout: 10 seconds
 ESPNow* e= new ESPNow(gatewayMac);          // create ESPNow singleton
-ESPNow* ESPNow::instance = e;               // make singleton globally accessible
+ESPNow* ESPNow::instance = e;               // make singleton global accessible for ESP callback
 
 void setup() {
 
     Serial.begin(115200);
-    Serial.println("... setup ...");
 
-#ifdef BME280  
-    s = new BME280Sensor(BMEPower);
+#ifdef BME280_SENSOR
+    s = new BME280Sensor(POWERPIN);
 #else
-    s = new DHT22Sensor(DHTPIN, DHTTYPE, DHTPower);
+    s = new DHT22Sensor(DHTPIN, POWERPIN);
 #endif
-    
+
     if (! s->start()) {
       Serial.printf("Initialization failed for %s\n",s->name());
       delay(3000);
@@ -70,8 +88,6 @@ void setup() {
 }
 
 void loop() {
-
-    Serial.println("... loop ...");
 
     Sensor::Data sensorData;
 

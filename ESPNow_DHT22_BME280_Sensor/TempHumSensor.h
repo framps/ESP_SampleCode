@@ -19,46 +19,31 @@
 #######################################################################################################################
 */
 
-// Latest code available on https://github.com/framps/ESP_stuff/tree/main/DHT22-BME280-espnow-deepSleep-sensor
+// Latest code available on https://github.com/framps/ESP_stuff/tree/main/ESPNow_DHT22_BME280_Sensor
 
 #pragma once
+
+#include <Arduino.h>
 
 	class Sensor {
 
   public:
 
     struct Data {
-        float temp;
-        float hum;
+        float temp;							// temperatur
+        float hum;							// humidity
     };
 
-    Sensor() {};      
+    Sensor(uint8_t powerPin) : powerPin(powerPin) {};
     virtual ~Sensor() { };
-      
+
     virtual int start() = 0;                          // rc 0 -> request failed
     virtual int poll(Data& polledData) = 0;           // rc 0 -> request failed
     virtual const char* name() = 0;
+
+	protected:
+		uint8_t powerPin;						// pin used to turn on/off Vcc of sensor
     };
-
-  #include "DHT.h"
-  
-	class DHT22Sensor : public Sensor {
-
-  public:
-
-    DHT22Sensor(uint8_t pin, uint8_t type, uint8_t powerPin);
-     
-    virtual ~DHT22Sensor() { };
-      
-    int start();                                 // rc 0 -> request failed   
-    int poll(Sensor::Data& polledData);          // rc 0 -> request failed
-    const char* name() { return "DHT22"; };
-
-  private:
-    DHT dht;
-    uint8_t powerPin;
-    };
-
 
   #include <BME280I2C.h>
   #include <Wire.h>
@@ -67,14 +52,34 @@
 
   public:
 
-    BME280Sensor (uint8_t powerPin);      
+    BME280Sensor (uint8_t powerPin);
     virtual ~BME280Sensor () { };
-      
+
     int start();                                 // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
     const char* name() { return "BME280"; };
 
   private:
     BME280I2C bme;
-    uint8_t powerPin;
     };
+
+  #include "DHT.h"
+
+  #define DHTTYPE DHT22           // DHT 22  (AM2302), AM2321
+
+  class DHT22Sensor : public Sensor {
+
+  public:
+
+    DHT22Sensor(uint8_t pin, uint8_t powerPin);
+
+    virtual ~DHT22Sensor() { };
+
+    int start();                                 // rc 0 -> request failed
+    int poll(Sensor::Data& polledData);          // rc 0 -> request failed
+    const char* name() { return "DHT22"; };
+
+  private:
+    DHT dht;
+    };
+    

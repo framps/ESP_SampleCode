@@ -19,14 +19,15 @@
 #######################################################################################################################
 */
 
-// Latest code available on https://github.com/framps/ESP_stuff/tree/main/DHT22-BME280-espnow-deepSleep-sensor
+// Latest code available on https://github.com/framps/ESP_stuff/tree/main/ESPNow_DHT22_BME280_Sensor
 
 #pragma once
 
-#include "TempHumSensor.h"
+#include "Arduino.h"
 
 	class ESPNow {
 
+//	Defaults
   const static int WIFI_CHANNEL = 1;
   const static int SLEEP_TIME = 60e6;
   const static int SEND_TIMEOUT = 10000;
@@ -35,7 +36,7 @@
 
     ESPNow(uint8_t* gatewayMac, int wifiChannel=WIFI_CHANNEL, int sleepTime=SLEEP_TIME, int sendTimeout=SEND_TIMEOUT);
     virtual ~ESPNow() { };
-      
+
     int initialize();                     // rc 0 -> request failed
     int send(Sensor::Data &polledData);   // rc 0 -> request failed
     int waitForCompletion();              // rc 0 -> request failed
