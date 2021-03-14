@@ -46,7 +46,7 @@
     virtual int stop();                               // rc 0 -> request failed
     virtual int startSensor() = 0;                    // rc 0 -> request failed
     virtual int poll(Data& polledData) = 0;           // rc 0 -> request failed
-    virtual const char* name() = 0;
+    virtual const char* const name() = 0;
 
 	protected:
     bool usePowerPin;
@@ -69,15 +69,13 @@
 
     int startSensor();                           // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
-    const char* name() { return "BME280"; };
+    const char* const name() { return "BME280"; };
 
   private:
     BME280I2C bme;
     };
 
   #include "DHT.h"
-
-  #define DHTTYPE DHT22           // DHT 22  (AM2302), AM2321
 
   class DHT22Sensor : public Sensor {
 
@@ -92,9 +90,10 @@
 
     int startSensor();                           // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
-    const char* name() { return "DHT22"; };
+    const char* const name() { return "DHT22"; };
 
   private:
     DHT dht;
-    };
+
+  };
     

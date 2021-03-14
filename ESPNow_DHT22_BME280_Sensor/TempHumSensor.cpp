@@ -25,27 +25,36 @@
 
 int Sensor::start() {
 
-  Serial.printf("Starting %s\n",this->name());
+  Serial.printf("Starting %s with delays %d and %d\n",this->name(), this->delays.activation,this->delays.startup);
 
   if ( usePowerPin ) {
+    Serial.printf("Vcc enabled %s on pin %d\n", this->name(), this->powerPin);
     pinMode(this->powerPin, OUTPUT);        
     digitalWrite(this->powerPin, HIGH);     // Vcc power on
-    delay(this->delays.activation);
   }
+  if ( this->delays.activation > 0 ) {
+    Serial.printf("Activation delay on %s of pin %d %d\n",this->name(), this->powerPin, this->delays.activation);
+    delay(this->delays.activation);
+  }    
 
+  Serial.println("***");
   int rc = this->startSensor();
 
-  if ( this->usePowerPin ) {
+  if ( this->delays.activation > 0 ) {
+    Serial.printf("Startup delay on %s of %d\n",this->name(), this->delays.startup);
     delay(this->delays.startup);
   }
   return rc;
 }
 
 int Sensor::stop() {
-  digitalWrite(this->powerPin, LOW);      // Vcc power off 
+  if ( usePowerPin ) {
+    Serial.printf("Vcc disabled %s on pin %d\n", this->name(), this->powerPin);
+    digitalWrite(this->powerPin, LOW);      // Vcc power off 
+  }
 }
 
-BME280Sensor::BME280Sensor(bool usePowerPin, uint8_t powerPin, Sensor::Delays) : bme(), Sensor(usePowerPin, powerPin, delays) {}
+BME280Sensor::BME280Sensor(bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : bme(), Sensor(usePowerPin, powerPin, delays) {}
 
 int BME280Sensor::startSensor() {
 
@@ -76,15 +85,17 @@ int BME280Sensor::poll(Sensor::Data& polledData) {
   return 1;
 }
 
-DHT22Sensor::DHT22Sensor(uint8_t pin, bool usePowerPin, uint8_t powerPin, Sensor::Delays) : dht(pin, usePowerPin, DHTTYPE), Sensor(usePowerPin, powerPin, delays) {}
+DHT22Sensor::DHT22Sensor(uint8_t pin, bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : dht(pin, DHT22), Sensor(usePowerPin, powerPin, delays) {}
 
 int DHT22Sensor::startSensor() {
-  dht.begin();
+  Serial.printf("Starting %s\n",this->name());
+  this->dht.begin();
   return 1;
 }
 
-int DHT22Sensor::poll(Sensor::Data& polledData) {
+int DHT22Sensor::poll(Sensor::Data& polledData) {  
   polledData.hum = floor(this->dht.readHumidity() + 0.05);
   polledData.temp = floor(this->dht.readTemperature() + 0.05);
+  Serial.printf("Polled %s with  data %f and %f\n",this->name(), polledData.temp, polledData.hum);
   return 1;
 }

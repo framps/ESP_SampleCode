@@ -32,6 +32,9 @@
 */
 
 /*
+
+Sample log
+
 19:50:25.260 -> Enable DHT
 19:50:26.253 -> Initialized DHT22
 19:50:26.253 -> Mac address of sensor: 10:52:1C:02:44:C7
@@ -69,6 +72,7 @@ ESPNow* ESPNow::instance = e;               // make singleton global accessible 
 void setup() {
 
     Serial.begin(115200);
+    Serial.println();
 
 #ifdef BME280_SENSOR
     s = new BME280Sensor();                 // no powerpin usage
