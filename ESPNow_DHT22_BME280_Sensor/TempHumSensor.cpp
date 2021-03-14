@@ -27,13 +27,17 @@ int Sensor::start() {
 
   Serial.printf("Starting %s\n",this->name());
 
-  pinMode(this->powerPin, OUTPUT);        
-  digitalWrite(this->powerPin, HIGH);     // Vcc power on
-  delay(this->delays.activation);
+  if ( usePowerPin ) {
+    pinMode(this->powerPin, OUTPUT);        
+    digitalWrite(this->powerPin, HIGH);     // Vcc power on
+    delay(this->delays.activation);
+  }
 
   int rc = this->startSensor();
 
-  delay(this->delays.startup);
+  if ( this->usePowerPin ) {
+    delay(this->delays.startup);
+  }
   return rc;
 }
 
@@ -41,7 +45,7 @@ int Sensor::stop() {
   digitalWrite(this->powerPin, LOW);      // Vcc power off 
 }
 
-BME280Sensor::BME280Sensor(uint8_t powerPin, Sensor::Delays) : bme(), Sensor(powerPin, delays) {}
+BME280Sensor::BME280Sensor(bool usePowerPin, uint8_t powerPin, Sensor::Delays) : bme(), Sensor(usePowerPin, powerPin, delays) {}
 
 int BME280Sensor::startSensor() {
 
@@ -72,7 +76,7 @@ int BME280Sensor::poll(Sensor::Data& polledData) {
   return 1;
 }
 
-DHT22Sensor::DHT22Sensor(uint8_t pin, uint8_t powerPin, Sensor::Delays) : dht(pin, DHTTYPE), Sensor(powerPin, delays) {}
+DHT22Sensor::DHT22Sensor(uint8_t pin, bool usePowerPin, uint8_t powerPin, Sensor::Delays) : dht(pin, usePowerPin, DHTTYPE), Sensor(usePowerPin, powerPin, delays) {}
 
 int DHT22Sensor::startSensor() {
   dht.begin();

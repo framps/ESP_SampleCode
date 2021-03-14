@@ -39,7 +39,7 @@
         int startup;						// ms to wait when sensor was started
     };
 
-    Sensor(uint8_t powerPin, Sensor::Delays delays) : powerPin(powerPin), delays(delays) {};
+    Sensor(bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : powerPin(powerPin), delays(delays) {};
     virtual ~Sensor() { };
 
     virtual int start();                              // rc 0 -> request failed
@@ -49,6 +49,7 @@
     virtual const char* name() = 0;
 
 	protected:
+    bool usePowerPin;
 		uint8_t powerPin;						// pin used to turn on/off Vcc of sensor
     Delays delays;              // sensor activation delays
     };
@@ -63,7 +64,7 @@
 
   public:
 
-    BME280Sensor (uint8_t powerPin, Sensor::Delays delays = Sensor::Delays{BME_ACTIVATION_DELAY_DEFAULT, BME_STARTUP_DELAY_DEFAULT});
+    BME280Sensor (bool usePowerPin = false, uint8_t powerPin = 0, Sensor::Delays delays = Sensor::Delays{BME_ACTIVATION_DELAY_DEFAULT, BME_STARTUP_DELAY_DEFAULT});
     virtual ~BME280Sensor () { };
 
     int startSensor();                           // rc 0 -> request failed
@@ -80,12 +81,12 @@
 
   class DHT22Sensor : public Sensor {
 
-  #define DHT_ACTIVATION_DELAY_DEFAULT 100
+  #define DHT_ACTIVATION_DELAY_DEFAULT 1000
   #define DHT_STARTUP_DELAY_DEFAULT 0
 
   public:
 
-    DHT22Sensor(uint8_t pin, uint8_t powerPin, Sensor::Delays delays = Sensor::Delays{DHT_ACTIVATION_DELAY_DEFAULT, DHT_STARTUP_DELAY_DEFAULT});
+    DHT22Sensor(uint8_t pin, bool usePowerPin = false, uint8_t powerPin = 0, Sensor::Delays delays = Sensor::Delays{DHT_ACTIVATION_DELAY_DEFAULT, DHT_STARTUP_DELAY_DEFAULT});
 
     virtual ~DHT22Sensor() { };
 

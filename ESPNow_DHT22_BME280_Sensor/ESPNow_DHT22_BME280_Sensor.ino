@@ -2,7 +2,7 @@
 // Sample sketch which uses either a BME280 or DHT22 sensor and sends the sensed
 // data via ESPNow to an ESPNow gateway. Deep sleep is used to minimze
 // current usage. For both sensors an additional GPIO can be used to turn off and on
-// Vcc to save more power.
+// Vcc to save more power. Delays can be specified after Vcc activation and after sensor startup
 //
 // Don't forget to connect GPIO16 with RST. Otherwise there will be no deep sleep wakeup
 //
@@ -71,9 +71,13 @@ void setup() {
     Serial.begin(115200);
 
 #ifdef BME280_SENSOR
-    s = new BME280Sensor(POWERPIN);
+    s = new BME280Sensor();                 // no powerpin usage
+    // s = new BME280Sensor(true, POWERPIN);   // use default delays (0,0)
+    // s = new BME280Sensor(true, POWERPIN, Sensor::Delays{100,100});   // use custom delays
 #else
-    s = new DHT22Sensor(DHTPIN, POWERPIN);
+    s = new DHT22Sensor(DHTPIN);            // no powerpin usage
+    // s = new DHT22Sensor(true, DHTPIN, POWERPIN);  // use default delays (1000,0)
+    // s = new DHT22Sensor(true, DHTPIN, POWERPIN, Sensor::Delays{500,10});   // use custom delays
 #endif
 
     if (! s->start()) {
