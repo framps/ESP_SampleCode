@@ -23,14 +23,27 @@
 
 #include "TempHumSensor.h"
 
-BME280Sensor::BME280Sensor(uint8_t powerPin) : bme(), Sensor(powerPin) {}
+int Sensor::start() {
 
-int BME280Sensor::start() {
+  Serial.printf("Starting %s\n",this->name());
 
-  pinMode(this->powerPin, OUTPUT);    // BME POWER PIN +5V
+  pinMode(this->powerPin, OUTPUT);        
+  digitalWrite(this->powerPin, HIGH);     // Vcc power on
+  delay(this->delays.activation);
 
-  Serial.println("Enable BME");
-  digitalWrite(this->powerPin, HIGH);
+  int rc = this->startSensor();
+
+  delay(this->delays.startup);
+  return rc;
+}
+
+int Sensor::stop() {
+  digitalWrite(this->powerPin, LOW);      // Vcc power off 
+}
+
+BME280Sensor::BME280Sensor(uint8_t powerPin, Sensor::Delays) : bme(), Sensor(powerPin, delays) {}
+
+int BME280Sensor::startSensor() {
 
   Wire.begin();
 
@@ -47,7 +60,6 @@ int BME280Sensor::start() {
 }
 
 int BME280Sensor::poll(Sensor::Data& polledData) {
-
   float temp(NAN), hum(NAN), pres(NAN);
 
   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
@@ -60,25 +72,15 @@ int BME280Sensor::poll(Sensor::Data& polledData) {
   return 1;
 }
 
-DHT22Sensor::DHT22Sensor(uint8_t pin, uint8_t powerPin) : dht(pin, DHTTYPE), Sensor(powerPin) {}
+DHT22Sensor::DHT22Sensor(uint8_t pin, uint8_t powerPin, Sensor::Delays) : dht(pin, DHTTYPE), Sensor(powerPin, delays) {}
 
-int DHT22Sensor::start() {
-
-  pinMode(this->powerPin, OUTPUT);    // DHT POWER PIN +5V
-
-  Serial.println("Enable DHT");
-  digitalWrite(this->powerPin, HIGH);
-
+int DHT22Sensor::startSensor() {
   dht.begin();
-  delay(1000);                       // wait for DHT22 to start up
-
   return 1;
 }
 
 int DHT22Sensor::poll(Sensor::Data& polledData) {
-
   polledData.hum = floor(this->dht.readHumidity() + 0.05);
   polledData.temp = floor(this->dht.readTemperature() + 0.05);
-
   return 1;
 }

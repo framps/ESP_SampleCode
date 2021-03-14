@@ -105,5 +105,6 @@ void loop() {
         ESP.restart();
     }
 
+    s->stop();              
     e->shutdown();
 }

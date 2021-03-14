@@ -34,15 +34,23 @@
         float hum;							// humidity
     };
 
-    Sensor(uint8_t powerPin) : powerPin(powerPin) {};
+   struct Delays {
+        int activation;		  		// ms to wait when sensor vcc was turned on
+        int startup;						// ms to wait when sensor was started
+    };
+
+    Sensor(uint8_t powerPin, Sensor::Delays delays) : powerPin(powerPin), delays(delays) {};
     virtual ~Sensor() { };
 
-    virtual int start() = 0;                          // rc 0 -> request failed
+    virtual int start();                              // rc 0 -> request failed
+    virtual int stop();                               // rc 0 -> request failed
+    virtual int startSensor() = 0;                    // rc 0 -> request failed
     virtual int poll(Data& polledData) = 0;           // rc 0 -> request failed
     virtual const char* name() = 0;
 
 	protected:
 		uint8_t powerPin;						// pin used to turn on/off Vcc of sensor
+    Delays delays;              // sensor activation delays
     };
 
   #include <BME280I2C.h>
@@ -50,12 +58,15 @@
 
   class BME280Sensor : public Sensor {
 
+  #define BME_ACTIVATION_DELAY_DEFAULT 0
+  #define BME_STARTUP_DELAY_DEFAULT 0
+
   public:
 
-    BME280Sensor (uint8_t powerPin);
+    BME280Sensor (uint8_t powerPin, Sensor::Delays delays = Sensor::Delays{BME_ACTIVATION_DELAY_DEFAULT, BME_STARTUP_DELAY_DEFAULT});
     virtual ~BME280Sensor () { };
 
-    int start();                                 // rc 0 -> request failed
+    int startSensor();                           // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
     const char* name() { return "BME280"; };
 
@@ -69,13 +80,16 @@
 
   class DHT22Sensor : public Sensor {
 
+  #define DHT_ACTIVATION_DELAY_DEFAULT 100
+  #define DHT_STARTUP_DELAY_DEFAULT 0
+
   public:
 
-    DHT22Sensor(uint8_t pin, uint8_t powerPin);
+    DHT22Sensor(uint8_t pin, uint8_t powerPin, Sensor::Delays delays = Sensor::Delays{DHT_ACTIVATION_DELAY_DEFAULT, DHT_STARTUP_DELAY_DEFAULT});
 
     virtual ~DHT22Sensor() { };
 
-    int start();                                 // rc 0 -> request failed
+    int startSensor();                           // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
     const char* name() { return "DHT22"; };
 
