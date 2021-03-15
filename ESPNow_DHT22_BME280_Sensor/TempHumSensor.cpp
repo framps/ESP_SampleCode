@@ -85,7 +85,7 @@ int BME280Sensor::poll(Sensor::Data& polledData) {
   return 1;
 }
 
-DHT22Sensor::DHT22Sensor(uint8_t pin, bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : dht(pin, DHT22), Sensor(usePowerPin, powerPin, delays) {}
+DHT22Sensor::DHT22Sensor(uint8_t pin, bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : pin(pin), dht(pin, DHT22), Sensor(usePowerPin, powerPin, delays) {}
 
 int DHT22Sensor::startSensor() {
   Serial.printf("Starting %s\n",this->name());
@@ -98,4 +98,8 @@ int DHT22Sensor::poll(Sensor::Data& polledData) {
   polledData.temp = floor(this->dht.readTemperature() + 0.05);
   Serial.printf("Polled %s with  data %f and %f\n",this->name(), polledData.temp, polledData.hum);
   return 1;
+}
+
+std::ostream &operator<<(std::ostream &os, DHT22Sensor const &myself) {
+  return os << (std::string)myself.name() << std::string(": ") << myself.pin << std::string(" ") << myself.usePowerPin << std::string(" ") << myself.powerPin << std::string(" - ") << myself.delays.activation << myself.delays.startup; 
 }

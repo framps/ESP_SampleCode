@@ -46,7 +46,7 @@
     virtual int stop();                               // rc 0 -> request failed
     virtual int startSensor() = 0;                    // rc 0 -> request failed
     virtual int poll(Data& polledData) = 0;           // rc 0 -> request failed
-    virtual const char* const name() = 0;
+    virtual const char* name() const = 0;
 
 	protected:
     bool usePowerPin;
@@ -69,7 +69,7 @@
 
     int startSensor();                           // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
-    const char* const name() { return "BME280"; };
+    const char* name() const { return "BME280"; };
 
   private:
     BME280I2C bme;
@@ -90,10 +90,12 @@
 
     int startSensor();                           // rc 0 -> request failed
     int poll(Sensor::Data& polledData);          // rc 0 -> request failed
-    const char* const name() { return "DHT22"; };
+    const char* name() const { return "DHT22"; };
 
   private:
     DHT dht;
+    uint8_t pin;
 
-  };
-    
+  friend 
+    std::ostream &operator<<(std::ostream &os, DHT22Sensor const &myself);
+};
