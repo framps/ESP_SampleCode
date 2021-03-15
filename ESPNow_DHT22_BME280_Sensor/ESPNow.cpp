@@ -29,14 +29,17 @@ extern "C" {
 #include <espnow.h>
 }
 
-ESPNow::ESPNow(uint8_t* gatewayMac, int wifiChannel, int sleepTime, int sendTimeout) : gatewayMac(gatewayMac), wifiChannel(wifiChannel), sleepTime(sleepTime), sendTimeout(sendTimeout), dataSent(false) { };
+ESPNow::ESPNow(uint8_t* gatewayMac, int wifiChannel, int sleepTime, int sendTimeout) : gatewayMac(gatewayMac), wifiChannel(wifiChannel), sleepTime(sleepTime), sendTimeout(sendTimeout), dataSent(false), debug(false) { };
 
-int ESPNow::initialize() {
+int ESPNow::start() {
 
   ESPNow::instance = this;            // make instance accessible as singleton
   WiFi.mode(WIFI_STA);                // Station mode for sensor
   WiFi.begin();
-  Serial.print("Mac address of sensor: "); Serial.println(WiFi.macAddress());
+
+  if ( this->debug) {
+    Serial.print("Mac address of sensor: "); Serial.println(WiFi.macAddress());
+  }    
 
   if (esp_now_init() != 0) {
     Serial.println("ESPNow init failed");
@@ -50,22 +53,27 @@ int ESPNow::initialize() {
   esp_now_add_peer(this->gatewayMac, ESP_NOW_ROLE_SLAVE, this->wifiChannel, NULL, 0);
 
   esp_now_register_send_cb([](uint8_t* mac, uint8_t status) {
-    Serial.print("send_cb, status = "); Serial.print(status);
-    Serial.print(", to mac: ");
-    char macString[50] = {0};
-    sprintf(macString, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    Serial.println(macString);
+    if ( ESPNow::instance->debug) {
+      Serial.print("send_cb, status = "); Serial.print(status);
+      Serial.print(", to mac: ");
+      char macString[50] = {0};
+      sprintf(macString, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      Serial.println(macString);
+    }
     ESPNow::instance->dataSent = status == 0;     // hack to access dataSent boolean from ESPNow callback function
   });
 }
 
-int ESPNow::send(Sensor::Data &polledData) {
+int ESPNow::send(Sensor &s) {
 
-    Serial.print("send, hum="); Serial.println(polledData.hum);
-    Serial.print("send, temp="); Serial.println(polledData.temp);
+    Sensor::Data d = Sensor::Data{s.temperature(), s.humidity()};
+    if ( this->debug) {
+      Serial.print("send, hum="); Serial.println(d.temp);
+      Serial.print("send, temp="); Serial.println(d.hum);
+    }      
 
-    u8 bs[sizeof(polledData)];
-    memcpy(bs, &polledData, sizeof(polledData));
+    u8 bs[sizeof(d)];
+    memcpy(bs, &d, sizeof(d));
     esp_now_send(NULL, bs, sizeof(bs));
 
     int rc = this->waitForCompletion();
@@ -81,7 +89,9 @@ int ESPNow::waitForCompletion() {
 }
 
 void ESPNow::shutdown() {
-    Serial.print("Going to sleep, uptime: "); Serial.println(millis());
+    if ( this->debug) {
+      Serial.print("Going to sleep, uptime: "); Serial.println(millis());
+    }
     ESP.deepSleep(this->sleepTime, WAKE_RF_DEFAULT);
     delay(100);       // give ESP time to complete shutdown
     // no return

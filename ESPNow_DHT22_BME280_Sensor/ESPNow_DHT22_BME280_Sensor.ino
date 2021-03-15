@@ -52,13 +52,12 @@ Sample log
 #define DHTPIN 12               // GPIO used to retrieve DHT sensor data
 #define POWERPIN 15             // Vcc power pin, used to turn off Vcc of sensors before deep sleep starts and
                                 // to turn on when woken up from deep sleep
-
+#define DEBUG                   // enable debug messages
+                                
 // mac of ESPNow gateway
 uint8_t gatewayMac[] = { 0x10, 0x52, 0x1C, 0x5D, 0x5C, 0x9D};
 
-// to use BME280 sensor uncomment following define
-// to use DHT22 sensor comment out following define
-// #define BME280_SENSOR
+// #define BME280_SENSOR // otherwise use DHT22 sensor
 
 Sensor *s = NULL;
 
@@ -76,13 +75,21 @@ void setup() {
 
 #ifdef BME280_SENSOR
     s = new BME280Sensor();                 // no powerpin usage
-    // s = new BME280Sensor(true, POWERPIN);   // use default delays (0,0)
-    // s = new BME280Sensor(true, POWERPIN, Sensor::Delays{100,100});   // use custom delays
+    // s = new BME280Sensor(POWERPIN);      // use default delays 
+    // s = new BME280Sensor(POWERPIN, Sensor::Delays{100,100});   // use custom delays
 #else
     s = new DHT22Sensor(DHTPIN);            // no powerpin usage
-    // s = new DHT22Sensor(true, DHTPIN, POWERPIN);  // use default delays (1000,0)
-    // s = new DHT22Sensor(true, DHTPIN, POWERPIN, Sensor::Delays{500,10});   // use custom delays
+    // s = new DHT22Sensor(DHTPIN, POWERPIN);     // use default delays
+    // s = new DHT22Sensor(DHTPIN, POWERPIN, Sensor::Delays{500,10});   // use custom delays
 #endif
+
+#ifdef DEBUG  
+    Serial.println("Enabling debug messages");
+    s->enableDebug();
+    e->enableDebug();
+#endif    
+
+//  start sensor
 
     if (! s->start()) {
       Serial.printf("Initialization failed for %s\n",s->name());
@@ -92,27 +99,36 @@ void setup() {
       Serial.printf("Initialized %s\n",s->name());
   }
 
-   e->initialize();
+//  start ESPNow
+
+   e->start();
 }
 
 void loop() {
 
-    Sensor::Data sensorData;
+//  Poll sensor data
 
-    if (! s->poll(sensorData)) {
+    if (! s->poll()) {
         Serial.println("Poll failed");
         delay(3000);
         ESP.restart();
     };
 
-    Serial.printf("Temp: %f, Hum: %f\n",sensorData.temp, sensorData.hum);
+    Serial.printf("Temperature: %f, Humidity: %f\n",s->temperature(), s->humidity());
 
-    if (! e->send(sensorData)) {
+//  send sensor data via ESPNow    
+
+    if (! e->send(*s)) {
         Serial.println("Send failed");
         delay(3000);
         ESP.restart();
     }
 
+//  stop sensor
+
     s->stop();              
+
+//  and shutdown ESP into deep sleep
+
     e->shutdown();
 }

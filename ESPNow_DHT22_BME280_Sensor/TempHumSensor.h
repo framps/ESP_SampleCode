@@ -39,19 +39,24 @@
         int startup;						// ms to wait when sensor was started
     };
 
-    Sensor(bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : powerPin(powerPin), delays(delays) {};
+    Sensor(uint8_t powerPin, Sensor::Delays delays) : powerPin(powerPin), delays(delays), debug(false) {};
     virtual ~Sensor() { };
+
+    virtual float temperature() { return this->data.temp; };
+    virtual float humidity() { return this->data.hum; };
+    virtual void enableDebug() {this->debug = true; };
 
     virtual int start();                              // rc 0 -> request failed
     virtual int stop();                               // rc 0 -> request failed
     virtual int startSensor() = 0;                    // rc 0 -> request failed
-    virtual int poll(Data& polledData) = 0;           // rc 0 -> request failed
+    virtual int poll() = 0;                           // rc 0 -> request failed
     virtual const char* name() const = 0;
 
 	protected:
-    bool usePowerPin;
+    Data data;
 		uint8_t powerPin;						// pin used to turn on/off Vcc of sensor
     Delays delays;              // sensor activation delays
+    bool debug;
     };
 
   #include <BME280I2C.h>
@@ -64,11 +69,11 @@
 
   public:
 
-    BME280Sensor (bool usePowerPin = false, uint8_t powerPin = 0, Sensor::Delays delays = Sensor::Delays{BME_ACTIVATION_DELAY_DEFAULT, BME_STARTUP_DELAY_DEFAULT});
+    BME280Sensor (uint8_t powerPin = 0, Sensor::Delays delays = Sensor::Delays{BME_ACTIVATION_DELAY_DEFAULT, BME_STARTUP_DELAY_DEFAULT});
     virtual ~BME280Sensor () { };
 
     int startSensor();                           // rc 0 -> request failed
-    int poll(Sensor::Data& polledData);          // rc 0 -> request failed
+    int poll();                                  // rc 0 -> request failed
     const char* name() const { return "BME280"; };
 
   private:
@@ -84,18 +89,15 @@
 
   public:
 
-    DHT22Sensor(uint8_t pin, bool usePowerPin = false, uint8_t powerPin = 0, Sensor::Delays delays = Sensor::Delays{DHT_ACTIVATION_DELAY_DEFAULT, DHT_STARTUP_DELAY_DEFAULT});
+    DHT22Sensor(uint8_t pin, uint8_t powerPin = 0, Sensor::Delays delays = Sensor::Delays{DHT_ACTIVATION_DELAY_DEFAULT, DHT_STARTUP_DELAY_DEFAULT});
 
     virtual ~DHT22Sensor() { };
 
     int startSensor();                           // rc 0 -> request failed
-    int poll(Sensor::Data& polledData);          // rc 0 -> request failed
+    int poll();                                  // rc 0 -> request failed
     const char* name() const { return "DHT22"; };
 
   private:
     DHT dht;
     uint8_t pin;
-
-  friend 
-    std::ostream &operator<<(std::ostream &os, DHT22Sensor const &myself);
 };

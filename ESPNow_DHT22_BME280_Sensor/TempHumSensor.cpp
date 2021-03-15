@@ -25,36 +25,45 @@
 
 int Sensor::start() {
 
-  Serial.printf("Starting %s with delays %d and %d\n",this->name(), this->delays.activation,this->delays.startup);
+  if ( this->debug) {
+    Serial.printf("Starting %s with delays %d and %d: %d\n",this->name(), this->delays.activation,this->delays.startup);
+  }    
 
-  if ( usePowerPin ) {
-    Serial.printf("Vcc enabled %s on pin %d\n", this->name(), this->powerPin);
+  if ( this->powerPin > 0 ) {
+    if ( this->debug) {
+      Serial.printf("Vcc enabled %s on pin %d\n", this->name(), this->powerPin);
+    }      
     pinMode(this->powerPin, OUTPUT);        
     digitalWrite(this->powerPin, HIGH);     // Vcc power on
   }
   if ( this->delays.activation > 0 ) {
-    Serial.printf("Activation delay on %s of pin %d %d\n",this->name(), this->powerPin, this->delays.activation);
+    if ( this->debug) {
+      Serial.printf("Activation delay on %s of pin %d %d\n",this->name(), this->powerPin, this->delays.activation);
+    }      
     delay(this->delays.activation);
   }    
 
-  Serial.println("***");
   int rc = this->startSensor();
 
-  if ( this->delays.activation > 0 ) {
-    Serial.printf("Startup delay on %s of %d\n",this->name(), this->delays.startup);
+  if ( this->delays.startup > 0 ) {
+    if ( this->debug) {
+      Serial.printf("Startup delay on %s of %d\n",this->name(), this->delays.startup);
+    }
     delay(this->delays.startup);
   }
   return rc;
 }
 
 int Sensor::stop() {
-  if ( usePowerPin ) {
-    Serial.printf("Vcc disabled %s on pin %d\n", this->name(), this->powerPin);
+  if ( this->powerPin > 0) {
+    if ( this->debug) {
+      Serial.printf("Vcc disabled %s on pin %d\n", this->name(), this->powerPin);
+    }
     digitalWrite(this->powerPin, LOW);      // Vcc power off 
   }
 }
 
-BME280Sensor::BME280Sensor(bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : bme(), Sensor(usePowerPin, powerPin, delays) {}
+BME280Sensor::BME280Sensor(uint8_t powerPin, Sensor::Delays delays) : bme(), Sensor(powerPin, delays) {}
 
 int BME280Sensor::startSensor() {
 
@@ -72,7 +81,7 @@ int BME280Sensor::startSensor() {
   return 1;
 }
 
-int BME280Sensor::poll(Sensor::Data& polledData) {
+int BME280Sensor::poll() {
   float temp(NAN), hum(NAN), pres(NAN);
 
   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
@@ -80,26 +89,29 @@ int BME280Sensor::poll(Sensor::Data& polledData) {
 
   this->bme.read(pres, temp, hum, tempUnit, presUnit);
 
-  polledData.temp = floor(temp + 0.05);
-  polledData.hum = floor(hum + 0.05);
+  this->data.temp = floor(temp + 0.05);
+  this->data.hum = floor(hum + 0.05);
+  if ( this->debug) {
+    Serial.printf("Polled %s with  data %f and %f\n",this->name(), this->temperature(), this->humidity());
+  }
   return 1;
 }
 
-DHT22Sensor::DHT22Sensor(uint8_t pin, bool usePowerPin, uint8_t powerPin, Sensor::Delays delays) : pin(pin), dht(pin, DHT22), Sensor(usePowerPin, powerPin, delays) {}
+DHT22Sensor::DHT22Sensor(uint8_t pin, uint8_t powerPin, Sensor::Delays delays) : pin(pin), dht(pin, DHT22), Sensor(powerPin, delays) {}
 
 int DHT22Sensor::startSensor() {
-  Serial.printf("Starting %s\n",this->name());
+  if ( this->debug) {
+    Serial.printf("Starting %s on pin %d\n",this->name(), this->pin);
+  }
   this->dht.begin();
   return 1;
 }
 
-int DHT22Sensor::poll(Sensor::Data& polledData) {  
-  polledData.hum = floor(this->dht.readHumidity() + 0.05);
-  polledData.temp = floor(this->dht.readTemperature() + 0.05);
-  Serial.printf("Polled %s with  data %f and %f\n",this->name(), polledData.temp, polledData.hum);
+int DHT22Sensor::poll() {  
+  this->data.hum = floor(this->dht.readHumidity() + 0.05);
+  this->data.temp = floor(this->dht.readTemperature() + 0.05);
+  if ( this->debug) {
+    Serial.printf("Polled %s with  data %f and %f\n",this->name(), this->temperature(), this->humidity());
+  }
   return 1;
-}
-
-std::ostream &operator<<(std::ostream &os, DHT22Sensor const &myself) {
-  return os << (std::string)myself.name() << std::string(": ") << myself.pin << std::string(" ") << myself.usePowerPin << std::string(" ") << myself.powerPin << std::string(" - ") << myself.delays.activation << myself.delays.startup; 
 }

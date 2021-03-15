@@ -24,6 +24,7 @@
 #pragma once
 
 #include "Arduino.h"
+#include "TempHumSensor.h"
 
 	class ESPNow {
 
@@ -37,10 +38,12 @@
     ESPNow(uint8_t* gatewayMac, int wifiChannel=WIFI_CHANNEL, int sleepTime=SLEEP_TIME, int sendTimeout=SEND_TIMEOUT);
     virtual ~ESPNow() { };
 
-    int initialize();                     // rc 0 -> request failed
-    int send(Sensor::Data &polledData);   // rc 0 -> request failed
+    int start();                          // rc 0 -> request failed
+    int send(Sensor &s);                  // rc 0 -> request failed
     int waitForCompletion();              // rc 0 -> request failed
     void shutdown();                      // rc 0 -> request failed
+
+    void enableDebug() {this->debug = true; };
 
     static ESPNow* instance;
 
@@ -52,4 +55,5 @@
     int sleepTime;
     int wifiChannel;
     int sendTimeout;
+    bool debug;
     };
