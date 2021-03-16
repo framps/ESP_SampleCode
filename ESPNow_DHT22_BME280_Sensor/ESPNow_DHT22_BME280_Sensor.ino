@@ -87,12 +87,12 @@ void setup() {
     Serial.println();
 
 #ifdef BME280_SENSOR
-    s = new BME280Sensor();                   // no powerpin usage
-    // s = new BME280Sensor(POWER_PIN);       // use default delays 
+    s = new BME280Sensor();                      // no powerpin usage
+    // s = new BME280Sensor(POWER_PIN);          // use default delays 
     // s = new BME280Sensor(POWER_PIN, Sensor::Delays{100,100});   // use custom delays
 #else
-    s = new DHT22Sensor(DHT_PIN);              // no powerpin usage
-    // s = new DHT22Sensor(DHT_PIN, POWER_PIN);     // use default delays
+    s = new DHT22Sensor(DHT_PIN);                // no powerpin usage
+    // s = new DHT22Sensor(DHT_PIN, POWER_PIN);  // use default delays
     // s = new DHT22Sensor(DHT_PIN, POWER_PIN, Sensor::Delays{500,10});   // use custom delays
 #endif
 

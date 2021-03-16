@@ -64,7 +64,7 @@
 
   class BME280Sensor : public Sensor {
 
-  #define BME_ACTIVATION_DELAY_DEFAULT 0
+  #define BME_ACTIVATION_DELAY_DEFAULT 10
   #define BME_STARTUP_DELAY_DEFAULT 0
 
   public:
