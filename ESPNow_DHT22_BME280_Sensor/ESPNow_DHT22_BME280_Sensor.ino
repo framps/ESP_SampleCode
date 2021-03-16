@@ -49,24 +49,35 @@ Sample log
 #include "TempHumSensor.h"
 #include "ESPNow.h"
 
-#define DHTPIN 12               // GPIO used to retrieve DHT sensor data
-#define POWERPIN 15             // Vcc power pin, used to turn off Vcc of sensors before deep sleep starts and
-                                // to turn on when woken up from deep sleep
-#define DEBUG                   // enable debug messages
-                                
-// mac of ESPNow gateway
-uint8_t gatewayMac[] = { 0x10, 0x52, 0x1C, 0x5D, 0x5C, 0x9D};
+#define GATEWAY_MAC { 0x10, 0x52, 0x1C, 0x5D, 0x5C, 0x9D}
+#define DHT_PIN 12                 // GPIO used to retrieve DHT sensor data
+#define POWER_PIN 15               // Vcc power pin, used to turn off Vcc of sensors before deep sleep starts and
+                                   // to turn on when woken up from deep sleep
+#define POWERDOWN_PIN 14           // GPIO pin connected to chip enable (CH_PD/Enable) to power down ESP when Vcc too low 
+#define POWERDOWN_VCC 3000         // vcc in mV when to shutdown ESP
 
 // #define BME280_SENSOR // otherwise use DHT22 sensor
 
+#define DEBUG                      // enable debug messages
+                                
+// mac of ESPNow gateway
+uint8_t gatewayMac[] = GATEWAY_MAC;
+
 Sensor *s = NULL;
+
+// experimental ! Tests not completed as of now
+ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_PIN, POWERDOWN_VCC}; 
 
 // ESPNow has following default values:
 // wifiChannel:  1, NOTE: wifiChannel has to be constant all the time and doesn't float
 // deep sleep time: 60 seconds
 // ESPNow send timeout: 10 seconds
 ESPNow* e= new ESPNow(gatewayMac);          // create ESPNow singleton
-ESPNow* ESPNow::instance = e;               // make singleton global accessible for ESP callback
+
+// experimental ! Tests not completed as of now
+//ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton
+
+ESPNow* ESPNow::instance = e;                // make singleton global accessible for ESP callback
 
 void setup() {
 
@@ -74,13 +85,13 @@ void setup() {
     Serial.println();
 
 #ifdef BME280_SENSOR
-    s = new BME280Sensor();                 // no powerpin usage
-    // s = new BME280Sensor(POWERPIN);      // use default delays 
-    // s = new BME280Sensor(POWERPIN, Sensor::Delays{100,100});   // use custom delays
+    s = new BME280Sensor();                   // no powerpin usage
+    // s = new BME280Sensor(POWER_PIN);       // use default delays 
+    // s = new BME280Sensor(POWER_PIN, Sensor::Delays{100,100});   // use custom delays
 #else
-    s = new DHT22Sensor(DHTPIN);            // no powerpin usage
-    // s = new DHT22Sensor(DHTPIN, POWERPIN);     // use default delays
-    // s = new DHT22Sensor(DHTPIN, POWERPIN, Sensor::Delays{500,10});   // use custom delays
+    s = new DHT22Sensor(DHT_PIN);              // no powerpin usage
+    // s = new DHT22Sensor(DHT_PIN, POWER_PIN);     // use default delays
+    // s = new DHT22Sensor(DHT_PIN, POWER_PIN, Sensor::Delays{500,10});   // use custom delays
 #endif
 
 #ifdef DEBUG  

@@ -35,7 +35,12 @@
 
   public:
 
-    ESPNow(uint8_t* gatewayMac, int wifiChannel=WIFI_CHANNEL, int sleepTime=SLEEP_TIME, int sendTimeout=SEND_TIMEOUT);
+    struct PowerDownConfig {
+      uint8_t pin;
+      int vcc;
+    };
+
+    ESPNow(uint8_t* gatewayMac, int wifiChannel=WIFI_CHANNEL, int sleepTime=SLEEP_TIME, int sendTimeout=SEND_TIMEOUT, PowerDownConfig* powerDownConfig=NULL);
     virtual ~ESPNow() { };
 
     int start();                          // rc 0 -> request failed
@@ -49,11 +54,13 @@
 
   private:
     void sendData(uint8_t* mac, uint8_t status);
+    void powerDown();
 
     uint8_t* gatewayMac;
     bool dataSent;
     int sleepTime;
     int wifiChannel;
     int sendTimeout;
+    PowerDownConfig* powerDownConfig;
     bool debug;
     };
