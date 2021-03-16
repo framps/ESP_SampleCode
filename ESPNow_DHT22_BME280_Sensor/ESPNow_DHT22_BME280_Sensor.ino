@@ -56,6 +56,8 @@ Sample log
 #define POWERDOWN_PIN 14           // GPIO pin connected to chip enable (CH_PD/Enable) to power down ESP when Vcc too low 
 #define POWERDOWN_VCC 3000         // vcc in mV when to shutdown ESP
 
+ADC_MODE(ADC_VCC);
+
 // #define BME280_SENSOR // otherwise use DHT22 sensor
 
 #define DEBUG                      // enable debug messages
@@ -75,7 +77,7 @@ ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_PIN, POWERDOWN_VCC};
 ESPNow* e= new ESPNow(gatewayMac);          // create ESPNow singleton
 
 // experimental ! Tests not completed as of now
-//ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton
+// ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton
 
 ESPNow* ESPNow::instance = e;                // make singleton global accessible for ESP callback
 

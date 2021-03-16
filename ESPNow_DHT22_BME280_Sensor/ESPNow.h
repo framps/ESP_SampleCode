@@ -54,7 +54,8 @@
 
   private:
     void sendData(uint8_t* mac, uint8_t status);
-    void powerDown();
+    void powerDown(bool down);            // true, powerDown, false powerUp
+    bool isPowerDownEnabled() { return this->powerDownConfig != NULL && this->powerDownConfig->pin > 0 && this->powerDownConfig->vcc > 0; };
 
     uint8_t* gatewayMac;
     bool dataSent;
