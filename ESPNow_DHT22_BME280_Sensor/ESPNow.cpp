@@ -115,13 +115,16 @@ void ESPNow::shutdown() {
     // no return
 }
 
+/*
+ * This code unfortunately doesn't work on an ESP8266-12F
+ * 
+ * /
 void ESPNow::powerDown(bool down) {
 
     if ( down ) {
       if ( this->debug ) {
         Serial.printf("Going to power down by using pin %d\n",this->powerDownConfig->pin);
       };
-    
       digitalWrite(this->powerDownConfig->pin, 0);  // activate PD power-down pin of ESP8266
       delay(100);
       // no return if pin is connected
@@ -133,4 +136,24 @@ void ESPNow::powerDown(bool down) {
       pinMode(this->powerDownConfig->pin, OUTPUT);
       digitalWrite(this->powerDownConfig->pin, 1);  // bring up ESP8266 from power-down mode. It resets.
     }
-}
+*/
+
+/*
+ * Push ESP into deep sleep as long as possible
+ */
+
+void ESPNow::powerDown(bool down) {
+
+    if ( down ) {
+      if ( this->debug ) {
+        Serial.println("Deep sleep as long as possible");
+      };
+
+      // Sleep as long as you can
+      
+      uint64_t deepSleepMax = ESP.deepSleepMax();
+      deepSleepMax *= 0.95;
+      ESP.deepSleep(deepSleepMax, WAKE_RF_DISABLED);
+      delay(100);       // give ESP time to complete shutdown
+    }
+}          

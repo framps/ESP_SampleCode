@@ -36,7 +36,7 @@
   public:
 
     struct PowerDownConfig {
-      uint8_t pin;
+      // uint8_t pin;   does not work :-(
       int vcc;
     };
 
@@ -55,7 +55,8 @@
   private:
     void sendData(uint8_t* mac, uint8_t status);
     void powerDown(bool down);            // true, powerDown, false powerUp
-    bool isPowerDownEnabled() { return this->powerDownConfig != NULL && this->powerDownConfig->pin > 0 && this->powerDownConfig->vcc > 0; };
+//    bool isPowerDownEnabled() { return this->powerDownConfig != NULL && this->powerDownConfig->pin > 0 && this->powerDownConfig->vcc > 0; };
+    bool isPowerDownEnabled() { return this->powerDownConfig != NULL && this->powerDownConfig->vcc > 0; };
 
     uint8_t* gatewayMac;
     bool dataSent;
