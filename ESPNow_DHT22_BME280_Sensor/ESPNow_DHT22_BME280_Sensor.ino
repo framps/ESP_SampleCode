@@ -65,7 +65,6 @@ uint8_t gatewayMac[] = GATEWAY_MAC;
 
 Sensor *s = NULL;
 
-// experimental ! Tests not completed as of now
 ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_VCC}; 
 
 // ESPNow has following default values:
@@ -74,8 +73,7 @@ ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_VCC};
 // ESPNow send timeout: 10 seconds
 ESPNow* e= new ESPNow(gatewayMac);          // create ESPNow singleton
 
-// experimental ! Tests not completed as of now
-// ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton
+// ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton and power down
 
 ESPNow* ESPNow::instance = e;                // make singleton global accessible for ESP callback
 
