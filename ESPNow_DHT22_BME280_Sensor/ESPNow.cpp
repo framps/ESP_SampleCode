@@ -29,7 +29,11 @@ extern "C" {
 #include <espnow.h>
 }
 
-ESPNow::ESPNow(uint8_t* gatewayMac, int wifiChannel, int sleepTime, int sendTimeout, PowerDownConfig* powerDownConfig) : gatewayMac(gatewayMac), wifiChannel(wifiChannel), sleepTime(sleepTime), sendTimeout(sendTimeout), dataSent(false), debug(false), powerDownConfig(powerDownConfig) { };
+ESPNow::ESPNow(uint8_t* gatewayMac, int wifiChannel, int sleepTime, int sendTimeout, PowerDownConfig* powerDownConfig) : gatewayMac(gatewayMac), wifiChannel(wifiChannel), sleepTime(sleepTime), sendTimeout(sendTimeout), dataSent(false), debug(false), powerDownConfig(powerDownConfig) { 
+   if ( this->isPowerDownEnabled()) {
+    this->powerDown(false);
+  }  
+}
 
 int ESPNow::start() {
 
@@ -68,8 +72,8 @@ int ESPNow::send(Sensor &s) {
 
     Sensor::Data d = Sensor::Data{s.temperature(), s.humidity()};
     if ( this->debug) {
-      Serial.print("send, hum="); Serial.println(d.temp);
-      Serial.print("send, temp="); Serial.println(d.hum);
+      Serial.print("send, hum="); Serial.println(d.hum);
+      Serial.print("send, temp="); Serial.println(d.temp);
     }      
 
     u8 bs[sizeof(d)];
@@ -90,15 +94,14 @@ int ESPNow::waitForCompletion() {
 
 void ESPNow::shutdown() {
 
-    if ( this->powerDownConfig != NULL && this->powerDownConfig->pin > 0 && this->powerDownConfig->vcc > 0 ) {
+    if ( this->isPowerDownEnabled()) {
       int vcc=ESP.getVcc();
       if ( this->debug) {
           Serial.printf("Vcc: %d\n", vcc);
       }
       if ( ESP.getVcc() < this->powerDownConfig->vcc ) {
         if ( this->debug) {
-          Serial.println("Powering down");
-          this->powerDown();
+          this->powerDown(true);
           // no return if powerpin is connected, otherwise deep sleep
         }        
       }
@@ -112,13 +115,45 @@ void ESPNow::shutdown() {
     // no return
 }
 
-void ESPNow::powerDown() {
-    if ( this->debug ) {
-      Serial.printf("Going to power down by using pin %d\n",this->powerDownConfig->pin);
-    };
-    pinMode(this->powerDownConfig->pin, OUTPUT);
-    digitalWrite(this->powerDownConfig->pin, 1);  // bring up ESP8266 from power-down mode. It resets.
-    digitalWrite(this->powerDownConfig->pin, 0);  // activate PD power-down pin of ESP8266
-    delay(100);
-    // no return if pin is connected
-}
+/*
+ * This code unfortunately doesn't work on an ESP8266-12F
+ * 
+ * /
+void ESPNow::powerDown(bool down) {
+
+    if ( down ) {
+      if ( this->debug ) {
+        Serial.printf("Going to power down by using pin %d\n",this->powerDownConfig->pin);
+      };
+      digitalWrite(this->powerDownConfig->pin, 0);  // activate PD power-down pin of ESP8266
+      delay(100);
+      // no return if pin is connected
+    } 
+    else {
+      if ( this->debug ) {
+        Serial.printf("Power up by using pin %d\n",this->powerDownConfig->pin);
+      };
+      pinMode(this->powerDownConfig->pin, OUTPUT);
+      digitalWrite(this->powerDownConfig->pin, 1);  // bring up ESP8266 from power-down mode. It resets.
+    }
+*/
+
+/*
+ * Push ESP into deep sleep as long as possible
+ */
+
+void ESPNow::powerDown(bool down) {
+
+    if ( down ) {
+      if ( this->debug ) {
+        Serial.println("Deep sleep as long as possible");
+      };
+
+      // Sleep as long as you can
+      
+      uint64_t deepSleepMax = ESP.deepSleepMax();
+      deepSleepMax *= 0.95;
+      ESP.deepSleep(deepSleepMax, WAKE_RF_DISABLED);
+      delay(100);       // give ESP time to complete shutdown
+    }
+}          

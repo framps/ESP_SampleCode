@@ -1,8 +1,7 @@
 //
 // Sample sketch which uses either a BME280 or DHT22 sensor and sends the sensed
 // data via ESPNow to an ESPNow gateway. Deep sleep is used to minimze
-// current usage. For both sensors an additional GPIO can be used to turn off and on
-// Vcc to save more power. Delays can be specified after Vcc activation and after sensor startup
+// current usage. Delays can be specified after Vcc activation and after sensor startup
 //
 // Don't forget to connect GPIO16 with RST. Otherwise there will be no deep sleep wakeup
 //
@@ -53,8 +52,9 @@ Sample log
 #define DHT_PIN 12                 // GPIO used to retrieve DHT sensor data
 #define POWER_PIN 15               // Vcc power pin, used to turn off Vcc of sensors before deep sleep starts and
                                    // to turn on when woken up from deep sleep
-#define POWERDOWN_PIN 14           // GPIO pin connected to chip enable (CH_PD/Enable) to power down ESP when Vcc too low 
 #define POWERDOWN_VCC 3000         // vcc in mV when to shutdown ESP
+
+ADC_MODE(ADC_VCC);
 
 // #define BME280_SENSOR // otherwise use DHT22 sensor
 
@@ -65,8 +65,7 @@ uint8_t gatewayMac[] = GATEWAY_MAC;
 
 Sensor *s = NULL;
 
-// experimental ! Tests not completed as of now
-ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_PIN, POWERDOWN_VCC}; 
+ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_VCC}; 
 
 // ESPNow has following default values:
 // wifiChannel:  1, NOTE: wifiChannel has to be constant all the time and doesn't float
@@ -74,8 +73,7 @@ ESPNow::PowerDownConfig powerDownConfig{POWERDOWN_PIN, POWERDOWN_VCC};
 // ESPNow send timeout: 10 seconds
 ESPNow* e= new ESPNow(gatewayMac);          // create ESPNow singleton
 
-// experimental ! Tests not completed as of now
-//ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton
+// ESPNow* e= new ESPNow(gatewayMac,1,60e6,10000,&powerDownConfig);    // create ESPNow singleton and power down
 
 ESPNow* ESPNow::instance = e;                // make singleton global accessible for ESP callback
 
@@ -85,12 +83,12 @@ void setup() {
     Serial.println();
 
 #ifdef BME280_SENSOR
-    s = new BME280Sensor();                   // no powerpin usage
-    // s = new BME280Sensor(POWER_PIN);       // use default delays 
+    s = new BME280Sensor();                      // no powerpin usage
+    // s = new BME280Sensor(POWER_PIN);          // use default delays 
     // s = new BME280Sensor(POWER_PIN, Sensor::Delays{100,100});   // use custom delays
 #else
-    s = new DHT22Sensor(DHT_PIN);              // no powerpin usage
-    // s = new DHT22Sensor(DHT_PIN, POWER_PIN);     // use default delays
+    s = new DHT22Sensor(DHT_PIN);                // no powerpin usage
+    // s = new DHT22Sensor(DHT_PIN, POWER_PIN);  // use default delays
     // s = new DHT22Sensor(DHT_PIN, POWER_PIN, Sensor::Delays{500,10});   // use custom delays
 #endif
 
