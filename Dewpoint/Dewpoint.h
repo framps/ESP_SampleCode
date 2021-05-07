@@ -67,9 +67,3 @@ float TD(float r, float T) {                       // dew point
 float AF(float r, float T) {                       // absolute moisture
   return 100000.0*mw/Rstar*DD(r,T)/TK(T);
 }  
-
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-
-}
