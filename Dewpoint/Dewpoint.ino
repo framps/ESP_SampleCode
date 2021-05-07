@@ -1,20 +1,7 @@
 /* 
  *
- * Dew point, absolute moisture & vapor pressure calculation from temperature & humidity 
+ * Dew point sample sketch
  *  
- * Formula source: https://community.hiveeyes.org/t/dew-point-absolute-moisture-vapor-pressure-from-temperature-humidity-with-influxdb-flux/2934/1
- * Dew point calculator: https://www.omnicalculator.com/physics/dew-point
- * 
- * Variables:
- * 
- * r = relative humidity [%]
- * T = temperature in °C
- * TK = temperatur in Kelvin
- * TD = dew point temperature in °C
- * DD = vapor pressure in hPa
- * SDD = saturation vapor pressure in hPa
- * AF = absolute moisture in g/m^3
- *
 */
 
 /*
@@ -38,41 +25,7 @@
 #######################################################################################################################
 */
 
-// Constants
-const float a[2] = { 7.5, 7.6 };
-const float b[2] = { 237.3, 240.7 };  // Constants for T >= 0 and T < 0
-const float Rstar = 8314.3;           // universal gas constant in J(Kmol*K)
-const float mw = 18.016;              // molecular weight of steam in kg/kmol
-const float OffsetKelvin = 273.15;
-
-float TK(float T) {
-  return T+OffsetKelvin;
-}  
-
-float SDD(float T){                                // saturation vapor pressure 
-  int i=(T >= 0 ? 0 : 1);
-  return 6.1078*std::pow(10,((a[i]*T)/(b[i]+T)));
-}
-
-float DD(float r, float T) {                       // vapor pressure
-  return r/100.0*SDD(T);
-}  
-
-float TD(float r, float T) {                       // dew point
-  int i=(T >= 0 ? 0 : 1);
-  float v=std::log10(DD(r,T)/6.1078);
-  return b[i]*v/(a[i]-v);
-}  
-
-float AF(float r, float T) {                       // absolute moisture
-  return 100000.0*mw/Rstar*DD(r,T)/TK(T);
-}  
-
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-
-}
+#include "Dewpoint.h"
 
 struct sample {
   float T;
