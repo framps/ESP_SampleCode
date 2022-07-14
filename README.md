@@ -6,4 +6,5 @@
     1. ESPNow_DHT22_BME280_Sensor: Sensor sketch which uses either BME280 or DHT22 sensor and uses this sensor to publish the data via ESPnow and DeepSleep to a ESPNow gateway by using deep sleep to minimze power consumption. Vcc power for the sensor can be turned off to reduce power consumption during deep sleep period. Vcc activation and sensor startup delays are configurable.
     2. ESPNow_gateway: Sample sketch to receive ESPNow sensor data and forward the data to an MQTT broker
 4. OWM_BMP280: Sample sketch which queries current Open Weather Map data (temperature, humiditiy and pressure) and measures temperature and pressure with a BMP280.
-5. Dewpoint: Calculate dew point, absolute moisture & vapor pressure from temperature & humidity 
+5. Dewpoint: Calculate dew point, absolute moisture & vapor pressure from temperature & humidity
+6. ESP32_RFID_reader_with_PN532_webserver_and_emailnotification: Sample code which uses an RFID reader and a PN532 relais board to open doors. Webserver included and eMails are sent.
