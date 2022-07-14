@@ -61,9 +61,15 @@ AsyncWebServer server(80);
 
 const char index_html[] PROGMEM = R"rawliteral(
 
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
 
   <title>Tueroeffner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
   <style>
     html {font-family: Times New Roman; display: inline-block; text-align: center;}
     h2 {font-size: 3.0rem;}
@@ -110,7 +116,8 @@ setInterval(function ( ) {
   xhttp.send();
 }, 1000 ) ;
 </script>
-
+</body>
+</html>
 
 )rawliteral";
 
