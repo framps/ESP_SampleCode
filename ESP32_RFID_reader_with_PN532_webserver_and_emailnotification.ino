@@ -7,18 +7,18 @@
 // Code is provided as is with no support. Just use the code as a template.
 //
 
-#include <wifi.h>
-#include <asynctcp.h>
-#include <espasyncwebserver.h>
-#include <pn532.h>
-#include <pn532_debug.h>
-#include <pn532interface.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <PN532.h>
+#include <PN532_debug.h>
+#include <PN532Interface.h>
 #include <string.h>
-#include <softwareserial.h>
-#include <pn532_swhsu.h>
-#include <esp_mail_client.h>
-#include <fs.h>
-#include <spiffs.h>
+#include <SoftwareSerial.h>
+#include <PN532_SWHSU.h>
+#include <ESP_Mail_Client.h>
+#include <FS.h>
+#include <SPIFFS.h>
 
 #define SMTP_HOST "mail.gmx.net"
 #define SMTP_PORT 587
@@ -35,7 +35,7 @@ PN532_SWHSU pn532swhsu( SWSerial );
 
 PN532 nfc( pn532swhsu );
 
-const char* ssid = "WLANSSID";
+const char* ssid = "WLAN_SSID";
 const char* password = "geheim";
 
 IPAddress local_IP(192, 168, 0, 99);
@@ -60,22 +60,17 @@ unsigned long debounceDelay = 50;
 AsyncWebServer server(80);
 
 const char index_html[] PROGMEM = R"rawliteral(
-
-<!doctype html>
+<!DOCTYPE HTML>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-
-  <title>Tueroeffner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
+  <title>Türöffner</title>
+  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html {font-family: Times New Roman; display: inline-block; text-align: center;}
     h2 {font-size: 3.0rem;}
     h4 {font-size: 2.0rem;}
     p {font-size: 3.0rem;}
-    body {max-width: 900px; margin:0px auto; padding-bottom: 25px;}
+    body {max-width: 900px; margin:0px auto; padding-bottom: 25px; background-color: #000000; color: #ffffff;}
     .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
     .switch input {display: none}
     .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #FF0000; border-radius: 34px}
@@ -83,9 +78,9 @@ const char index_html[] PROGMEM = R"rawliteral(
     input:checked+.slider {background-color: #27c437}
     input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
   </style>
-
-
-  <h2>Tueroeffner</h2>
+</head>
+<body>
+  <h2>Türöffner</h2>
   %BUTTONPLACEHOLDER%
 <script>function toggleCheckbox(element) {
   var xhr = new XMLHttpRequest();
@@ -118,14 +113,13 @@ setInterval(function ( ) {
 </script>
 </body>
 </html>
-
 )rawliteral";
 
 String processor(const String& var){
   if(var == "BUTTONPLACEHOLDER"){
     String buttons ="";
     String outputStateValue = outputState();
-    buttons+= "<h4>TUERE IST <span id="\"outputState\""></span></h4><label class="\"switch\""><input type="\"checkbox\"" onchange="\"toggleCheckbox(this)\"" id="\"output\"" "="" +="" outputstatevalue=""><span class="\"slider\""></span></label>";
+    buttons+= "<h4>TÜRE IST <span id=\"outputState\"></span></h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
     return buttons;
   }
   return String();
@@ -226,7 +220,7 @@ Serial.println("Starte Programm ...");
   server.on("/update", HTTP_GET, [] (AsyncWebServerRequest *request) {
     String input_message;
     String inputParameter;
-    // GET input1 value on <esp_ip>/update?state=<input_message>
+    // GET input1 value on <ESP_IP>/update?state=<input_message>
     if (request->hasParam(input_parameter)) {
       input_message = request->getParam(input_parameter)->value();
       inputParameter = input_parameter;
@@ -293,7 +287,6 @@ success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
   uint8_t code6[4] = { 0x00, 0x00, 0x00, 0x06 } ;
   uidLength = 4 ;
     
-   
 if( memcmp(uid,code1,uidLength) == 0 )
 {
    Serial.println( "Chip 1" ) ;
@@ -407,7 +400,7 @@ else {Serial.println("Falsche UID");
    message.sender.email = AUTHOR_EMAIL;
    message.subject = "Falsche UID probiert";
    message.addRecipient("", RECIPIENT_EMAIL);
-   String htmlMsg = "<div style="\"color:#2f4468;\""><h1>Falscher RFID-Chip erkannt</h1><p>- Sollte das ein Test sein, kann die Email ignoriert werden.</p></div>";
+   String htmlMsg = "<div style=\"color:#2f4468;\"><h1>Falscher RFID-Chip erkannt</h1><p>- Sollte das ein Test sein, kann die Email ignoriert werden.</p></div>";
    message.html.content = htmlMsg.c_str();
    message.html.content = htmlMsg.c_str();
    message.text.charSet = "us-ascii";
