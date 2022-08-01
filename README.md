@@ -7,4 +7,4 @@
     2. ESPNow_gateway: Sample sketch to receive ESPNow sensor data and forward the data to an MQTT broker
 4. OWM_BMP280: Sample sketch which queries current Open Weather Map data (temperature, humiditiy and pressure) and measures temperature and pressure with a BMP280.
 5. Dewpoint: Calculate dew point, absolute moisture & vapor pressure from temperature & humidity
-6. UpdateOtaPOC: Proof of concept for an ESP image update strategy which uses the LastUpdate header field of the image to decide whether an update of the image should be done with OTA. 
+6. OtaUpdatePOC: Proof of concept for an ESP image update strategy which uses the LastUpdate header field of the image to decide whether an update of the image should be done with OTA. 
