@@ -7,4 +7,3 @@
     2. ESPNow_gateway: Sample sketch to receive ESPNow sensor data and forward the data to an MQTT broker
 4. OWM_BMP280: Sample sketch which queries current Open Weather Map data (temperature, humiditiy and pressure) and measures temperature and pressure with a BMP280.
 5. Dewpoint: Calculate dew point, absolute moisture & vapor pressure from temperature & humidity
-6. ESP32_RFID_reader_with_PN532_webserver_and_emailnotification: Sample code which uses an RFID reader PN532 and a relay board to open doors. Webserver included and eMails are sent.
