@@ -34,6 +34,7 @@
 #include <ESP8266httpUpdate.h>
 
 #include <Timezone.h>    // https://github.com/JChristensen/Timezone
+#include <ctime>
 
 #include "environment.h" // defines AP_NAME and AP_PASSWORD for WLAN login
 
@@ -81,7 +82,6 @@ void checkForUpdates() {
   fwURL.concat( __FILE__ );
   fwURL.replace(".ino",".bin");             // replace FILENAME .ino to .bin for image to check
 
-  Serial.printf( "Firmware build: %s %s\n", buildDate, buildTime );
   Serial.printf( "Firmware update download URL: %s\n", fwURL.c_str() );
 
   WiFiClient wifiClient;
@@ -125,6 +125,12 @@ void checkForUpdates() {
      time_t compileCE = compileTime(buildTime, buildDate);
      time_t compileUTC=CE.toUTC(compileCE);               // convert compile time to UTC in local CE timezone
      time_t imageUTC = compileTime(imageTime.c_str(), imageDate.c_str());
+
+    std::tm * ptm = std::localtime(&compileUTC);
+    char timBuffer[32];
+    // Format: Mo, 15.06.2009 20:20:00
+    std::strftime(timBuffer, 32, "%a, %d.%m.%Y %H:%M:%S", ptm);  
+    Serial.printf("Current image compile time : %s GMT\n",timBuffer);
 
     double timeDifference = difftime(imageUTC, compileUTC);
     Serial.printf("timeDifference: %f\n",timeDifference);
