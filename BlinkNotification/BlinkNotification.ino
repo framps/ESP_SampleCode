@@ -2,7 +2,7 @@
 // Sample how to use class BlinkNotification
 // -------------------------------------------------------------------------------------------------------------
 
-// Thank you __deets__ for your valuable help and feedback 
+// Thank you __deets__ for your valuable help and feedback
 
 /*
 #######################################################################################################################
@@ -49,26 +49,26 @@ BlinkNotification error(LED_PIN,50,".",100,10);      // blink fast
 
 // error blink pattern to signal an error condition, executed forever
 BlinkNotification sos(LED_PIN,500,"... --- ...   ",-1);
- 
+
 void setup() {
 
   activity.start();                                 // start blink activity pattern to simulate some activity
-  
+
   createError.once_ms(10000, setError);             // simulate error in 10 seconds
 
 }
 
-void loop() {  
+void loop() {
 
-  if ( errorOccured ) {    
-    activity.stop();                                // terminate blink activity  
-    delay(1000);                                    
+  if ( errorOccured ) {
+    activity.stop();                                // terminate blink activity
+    delay(1000);
     errorOccured = false;                           // don't execute this error path any more
     error.start();                                  // signal some error condition
     while (error.isActive()) {                      // wait until error condition is gone
       delay(100);
     }
-    delay(1000);                                    
+    delay(1000);
     sos.start();                                    // blink the error pattern (SOS) three times
-  }    
+  }
 }

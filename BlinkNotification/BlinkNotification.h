@@ -32,7 +32,7 @@
 
 namespace framp {
 
-	class BlinkNotification {
+    class BlinkNotification {
 
   public:
     BlinkNotification(
@@ -54,15 +54,16 @@ namespace framp {
     unsigned getRepeatCount() { return this->repeatCount; };
     void setDelayTime(unsigned delayTime) { this->delayTime = delayTime; };
     unsigned getDelayTime() { return this->delayTime; };
-		// tests
+
+    // tests
     bool isActive() { return this->active; };
 
-  // private: - not private because of C++ Lambda issue
+    // private: - not private because of C++ Lambda issue
     void flipLED();              // flip LED status
 
   private:
-	  uint8_t gpio;			     // gpio of LED
-		int blinkPeriod;       // period of a blink in ms
+    uint8_t gpio;              // gpio of LED
+    int blinkPeriod;       // period of a blink in ms
 
     Ticker ticker;         // ticker used to flip LED state
     unsigned onTime;       // time to have LED on for char
@@ -82,6 +83,6 @@ namespace framp {
     void setBlinkTimes(char c);  // calculate on/off delays
     void turnOn();
     void turnOff();
-	};
+    };
 
 }
