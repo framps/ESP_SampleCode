@@ -7,7 +7,7 @@
 /*
 #######################################################################################################################
 #
-#    Copyright (c) 2021 framp at linux-tips-and-tricks dot de
+#    Copyright (c) 2021,2022 framp at linux-tips-and-tricks dot de
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -35,11 +35,16 @@ BlinkNotification::BlinkNotification(uint8_t gpio, unsigned blinkPeriod, std::st
   blinkPattern(blinkPattern),
   blinkPeriod(blinkPeriod),
   delayTime(delayTime),
+  gapTime(delayTime/10),
   active(false),
   blinkOffset(0) {
-    pinMode(this->gpio, OUTPUT);
-    digitalWrite(this->gpio, HIGH);       // make sure LED is off
-    this->LEDStateOn = false;
+  pinMode(this->gpio, OUTPUT);
+  this->turnOff();
+}
+
+void call( BlinkNotification *obj )
+{
+   obj->flipLED() ;
 }
 
 void BlinkNotification::flipLED() {
@@ -48,18 +53,18 @@ void BlinkNotification::flipLED() {
 
     // handle on state
 
-    if ( this->LEDStateOn && this->onTime > 0) {
-      digitalWrite(this->gpio, LOW);
-      this->LEDStateOn = false;
-      this->ticker.once_ms(this->onTime, [this]() { this-> flipLED(); });
+    if ( ! this->LEDStateOn && this->onTime > 0) {
+      this->turnOn();
+	    this->ticker.once_ms(this->onTime, call, this);
       return;
     }
 
-    // handle off state
+    // handle on state
     else {
-      digitalWrite(this->gpio, HIGH);
-      this->LEDStateOn = true;
+      this->turnOff();
     }
+
+    delay(this->gapTime);
 
     // move on to next char
     this->blinkOffset++;
@@ -79,8 +84,7 @@ void BlinkNotification::flipLED() {
     }
 
     this->setBlinkTimes(this->blinkPattern[this->blinkOffset]);
-    this->ticker.once_ms(this->offTime + loopEndDelay, [this]() { this-> flipLED(); });
-
+    this->ticker.once_ms(this->offTime + loopEndDelay, call, this );
   }
 }
 
@@ -88,10 +92,10 @@ void BlinkNotification::setBlinkTimes(char c) {
 
   switch (c) {
     case '-':
-      this->onTime = this->blinkPeriod * 3 / 4;
+      this->onTime = this->blinkPeriod * 5 / 6;
       break;
     case '.':
-      this->onTime = this->blinkPeriod * 1 / 4;
+      this->onTime = this->blinkPeriod * 1 / 6;
       break;
     case ' ':
       this->onTime = 0;
@@ -103,23 +107,32 @@ void BlinkNotification::setBlinkTimes(char c) {
 
 void BlinkNotification::start () {
 
+  this->blinkOffset = 0;
   this->setBlinkTimes(this->blinkPattern[this->blinkOffset]);
   this->loopEndless = this-> repeatCount == -1;
   if ( this->loopEndless ) {
     this->repeatCount = 1;
   }
 
-  digitalWrite(this->gpio, HIGH);       // make sure LED is off
-  this->LEDStateOn = true;
+  this->turnOff();
   this->active = true;
   this->flipLED();
 }
 
 void BlinkNotification::stop() {
   this->ticker.detach();
-  digitalWrite(this->gpio, HIGH);       // make sure LED is off
-  this->LEDStateOn = false;
   this->active = false;
+  this->turnOff();
+}
+
+void BlinkNotification::turnOff() {
+  digitalWrite(this->gpio, LOW);
+  this->LEDStateOn = false;
+}
+
+void BlinkNotification::turnOn () {
+  digitalWrite(this->gpio, HIGH);
+  this->LEDStateOn = true;
 }
 
 }

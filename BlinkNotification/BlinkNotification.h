@@ -3,13 +3,13 @@
 // -------------------------------------------------------------------------------------------------------------
 // Simple class to create LED blink notifications with a blink pattern string which can include "-", "." and " "
 // -------------------------------------------------------------------------------------------------------------
-// 
-// Thank you __deets__ for your valuable help and feedback 
+//
+// Thank you __deets__ for your valuable help and feedback
 
 /*
 #######################################################################################################################
 #
-#    Copyright (c) 2021 framp at linux-tips-and-tricks dot de
+#    Copyright (c) 2021,2022 framp at linux-tips-and-tricks dot de
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -36,16 +36,16 @@ namespace framp {
 
   public:
     BlinkNotification(
-      uint8_t gpio  = BUILTIN_LED, 
+      uint8_t gpio,
       unsigned blinkPeriod = 1000,             // period in ms
-      std::string blinkTemplate = ".",          
+      std::string blinkTemplate = ".",
       unsigned repeatCount = 0,                // just execute blink loop once
       unsigned delayTime = 1000);              // delay at the end of blink loop in ms
-      
-    ~BlinkNotification() { 
-      this->stop(); 
+
+    ~BlinkNotification() {
+      this->stop();
       };
-      
+
     void start();           // start blink loop
     void stop();            // stop blink loop immediately
 
@@ -54,28 +54,34 @@ namespace framp {
     unsigned getRepeatCount() { return this->repeatCount; };
     void setDelayTime(unsigned delayTime) { this->delayTime = delayTime; };
     unsigned getDelayTime() { return this->delayTime; };
-    unsigned isActive() { return this->active; };
-  
-  private:  
+		// tests
+    bool isActive() { return this->active; };
+
+  // private: - not private because of C++ Lambda issue
+    void flipLED();              // flip LED status
+
+  private:
 	  uint8_t gpio;			     // gpio of LED
 		int blinkPeriod;       // period of a blink in ms
 
-    Ticker ticker;         // ticker used to flip LED state       
+    Ticker ticker;         // ticker used to flip LED state
     unsigned onTime;       // time to have LED on for char
     unsigned offTime;      // time to have LED off for char
-    unsigned delayTime;    // delay at end of blink loop in ms 
-    
+    unsigned gapTime;      // time to have a gap between chars
+    unsigned delayTime;    // delay at end of blink loop in ms
+
     bool LEDStateOn;       // LED on or off state
     bool loopEndless;      // blink all the time
     bool active;           // blink loop isrunning
-    
+
     unsigned repeatCount;  // number of blink repeats
     std::string blinkPattern;  // blink chars
     int blinkOffset;       // current processed char in blinkPattern
-		    
+
   private:
     void setBlinkTimes(char c);  // calculate on/off delays
-    void flipLED();              // flip LED status
+    void turnOn();
+    void turnOff();
 	};
-  
+
 }

@@ -7,7 +7,7 @@
 /*
 #######################################################################################################################
 #
-#    Copyright (c) 2021 framp at linux-tips-and-tricks dot de
+#    Copyright (c) 2021,2022 framp at linux-tips-and-tricks dot de
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@
 
 using namespace framp;
 
+#define LED_PIN 23
+
 Ticker createError;                                 // ticker to simulate an error situation
 bool errorOccured = false;
 void setError() {
@@ -36,20 +38,20 @@ void setError() {
 }
 
 // active blink pattern to signal ESP is active working, no default
-BlinkNotification activity(BUILTIN_LED,             // LED to blink, no default
-                            250,                    // period length of one LED blink in ms, default is 1000 ms
-                            "-.",                   // blink pattern, default is "."
-                            -1,                     // repeat loop 10 times, default is 0, use -1 for an endless loop
-                            10) ;                   // delay in ms at end of pattern, default is 0
+BlinkNotification activity(LED_PIN,                  // LED gpio to blink, no default
+                            500,                     // period length of one LED blink in ms, default is 1000 ms
+                            "-.",                    // blink pattern, default is "."
+                            -1,                      // repeat loop 10 times, default is 0, use -1 for an endless loop
+                            1000) ;                  // delay in ms at end of pattern, default is 0
 
 // signal some error condition and blink 10 times
-BlinkNotification error(BUILTIN_LED,50,".",100,10); 
+BlinkNotification error(LED_PIN,50,".",100,10);      // blink fast
 
 // error blink pattern to signal an error condition, executed forever
-BlinkNotification sos(BUILTIN_LED,500,"... --- ...   ",-1);
+BlinkNotification sos(LED_PIN,500,"... --- ...   ",-1);
  
 void setup() {
-  
+
   activity.start();                                 // start blink activity pattern to simulate some activity
   
   createError.once_ms(10000, setError);             // simulate error in 10 seconds
@@ -60,12 +62,13 @@ void loop() {
 
   if ( errorOccured ) {    
     activity.stop();                                // terminate blink activity  
+    delay(1000);                                    
     errorOccured = false;                           // don't execute this error path any more
     error.start();                                  // signal some error condition
     while (error.isActive()) {                      // wait until error condition is gone
       delay(100);
     }
-    delay(1000);                                    // simmulate error handling
+    delay(1000);                                    
     sos.start();                                    // blink the error pattern (SOS) three times
   }    
 }
