@@ -25,6 +25,8 @@
 
 VERSION=0.1
 MYSELF="$(basename "$0")"
+MYNAME="${MYSELF%.*}"
+MACLIST_FILENAME=/usr/local/etc/${MYNAME}.mac	# used to lookup descriptions for macs if host doesn't return any information
 
 # Adapt following mac address regex to you local environment
 MAC_Addresses=" (10:52:1c|24:6f:28|24:62:ab|a4:cf:12|f4:cf:a2|e0:98:06|fc:f5:c4|48:3f:da|bc:dd|24:a1:60)"
@@ -81,13 +83,18 @@ if (( ${#macAddress[@]} > 0 )); then
 
 	# 12.0.168.192.in-addr.arpa domain name pointer asterix.
 	for ip in "${!macAddress[@]}"; do
-		h="$(host "$ip" | grep Sensor)"
+		h="$(host "$ip")"
 		if (( ! $? )); then
 			read arpa dummy dummy dummy host rest <<< "$h"
 			host="${host::-1}" # delete trailing "."
 			host="$(cut -f 1 -d . <<< "$host")"
 		else
-			host="-Unknown-"
+			macMapping="$(grep ${macAddress[$ip]} $MACLIST_FILENAME)"
+			if (( ! $? )); then
+				host="-$(cut -f 2 -d ' ' <<< "$macMapping")-"
+			else
+				host="-Unknown-"
+			fi
 		fi
 		printf "%-15s %17s %s\n" $ip ${macAddress[$ip]} $host
 	done
