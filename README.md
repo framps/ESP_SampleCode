@@ -8,3 +8,18 @@
 4. OWM_BMP280: Sample sketch which queries current Open Weather Map data (temperature, humiditiy and pressure) and measures temperature and pressure with a BMP280.
 5. Dewpoint: Calculate dew point, absolute moisture & vapor pressure from temperature & humidity
 6. OtaUpdatePOC: Proof of concept for an ESP image update strategy which uses the LastUpdate header field of the image to decide whether an update of the image should be done with OTA. 
+7. findSensors: Search for active ESP sensors in subnet and display IP address, mac, hostname and an optional description
+
+## findSensors.sh
+
+```
+findSensors.sh 
+Scanning subnet 192.168.0.0/24 for ESPs ...
+
+IP address      Mac address       Hostname (Description)
+192.168.0.126   a4:cf:12:f5:a4:ef alpha (development room sensor)
+192.168.0.123   10:52:1c:5d:5c:9c beta (ESPNow gateway)
+192.168.0.101   24:62:ab:f3:04:64 gamma (brightness sensor)
+192.168.0.161   a4:cf:12:f4:d9:d4 delta (living room sensor)
+192.168.0.165   e0:98:06:86:2a:61 epsilon (IT room sensor)
+```
