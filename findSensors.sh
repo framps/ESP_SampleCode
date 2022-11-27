@@ -41,21 +41,22 @@ if ! command -v host COMMAND &> /dev/null; then
 	exit 255
 fi
 
-if (( ${BASH_VERSINFO[0]} < 4 )); then
+if (( BASH_VERSINFO[0] < 4 )); then
 	echo "Minimum bash 4.0 is required. You have $BASH_VERSION."
 	exit 255
 fi
 
-# define defaults 
+# define defaults
 
 DEFAULT_SUBNETMASK="192.168.0.0/24"
 DEFAULT_MAC_REGEX="10:52:1C|24:62:AB|24:6f:28|24:A16:03|3C:61:05|48:3F:DA|A4:CF:12|BC:DD:C2|E0:98:06|E8:DB:84|F4:CF:A2|FC:F5:C4"
-INI_FILENAME=~/.${MYNAME}
+INI_FILENAME=$HOME/.${MYNAME}
 
 # help text
 
 if (( $# >= 1 )) && [[ "$1" =~ ^(-h|--help|-\?)$ ]]; then
 	cat << EOH
+	$MYSELF $VERSION
 Usage:
 	$MYSELF                       Scan subnet $DEFAULT_SUBNETMASK for ESPs
 	$MYSELF <subnetmask>          Scan subnet for ESPs
@@ -91,10 +92,10 @@ MY_NETWORK=${1:-$DEFAULT_SUBNETMASK}
 MY_MAC_REGEX="$DEFAULT_MAC_REGEX"
 
 if [[ -f "$INI_FILENAME" ]]; then
-	MY_MAC_REGEX_FROM_INI="$(head -n 1 $INI_FILENAME | cut -f 2 -d " ")" 
+	MY_MAC_REGEX_FROM_INI="$(head -n 1 "$INI_FILENAME" | cut -f 2 -d " ")" 
 	if [[ -z "$MY_MAC_REGEX_FROM_INI" ]]; then
 		echo "Using Mac Regex from $INI_FILENAME"
-		MY_MAC_REGEX="$(head -n 1 $INI_FILENAME)"
+		MY_MAC_REGEX="$(head -n 1 "$INI_FILENAME")"
 	fi
 fi	
 MY_MAC_REGEX=" (${MY_MAC_REGEX})"
@@ -102,16 +103,15 @@ MY_MAC_REGEX=" (${MY_MAC_REGEX})"
 # define associative arrays for mac and hostname lookups
 
 declare -A macAddress=()
-declare -A hostName=()
 
 echo "Scanning subnet $MY_NETWORK for ESPs ..."
 
 # scan subnet for ESP macs
 
 # 192.168.0.12             ether   dc:a6:32:8f:28:fd   C                     wlp3s0 - 
-while read ip dummy mac rest; do
+while read -r ip dummy mac rest; do
 	macAddress["$ip"]="$mac"
-done < <(nmap -sP $MY_NETWORK &>/dev/null; arp -n | grep -Ei " $MY_MAC_REGEX")
+done < <(nmap -sP "$MY_NETWORK" &>/dev/null; arp -n | grep -Ei " $MY_MAC_REGEX")
 
 # retrieve and print hostnames
 
@@ -125,10 +125,10 @@ if (( ${#macAddress[@]} > 0 )); then
 		rc=$?
 		set -e
 		host=""
-		hostMapped=""
-		if (( ! $rc )); then
+		if (( ! rc )); then
 			# 12.0.168.192.in-addr.arpa domain name pointer asterix.
-			read arpa dummy dummy dummy host rest <<< "$h"
+			read -r arpa dummy dummy dummy host rest <<< "$h"
+			: "$arpa" "$dummy" # suppress shellcheck warning
 			host=${host::-1} # delete trailing "."
 		fi
 
@@ -136,18 +136,18 @@ if (( ${#macAddress[@]} > 0 )); then
 			host="Unknown"
 		fi
 
-		if [[ -f $INI_FILENAME ]]; then
+		if [[ -f "$INI_FILENAME" ]]; then
 			set +e
-			hostDescription="$(grep "${macAddress[$ip]}" $INI_FILENAME)"
+			hostDescription="$(grep "${macAddress[$ip]}" "$INI_FILENAME")"
 			rc=$?
 			set -e
-			if (( ! $rc )); then
+			if (( ! rc )); then
 				hostDescription="$(cut -f 2- -d ' ' <<< "$hostDescription" | sed 's/^ *//; s/ *$//')"
 				host="${host} ($hostDescription)"
 			fi
 		fi
 
-		printf "%-15s %17s %s\n" $ip ${macAddress[$ip]} "$host"
+		printf "%-15s %17s %s\n" "$ip" "${macAddress[$ip]}" "$host"
 	done 
 else
 	echo "No ESPs found with mac regex $MY_MAC_REGEX"
