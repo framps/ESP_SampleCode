@@ -9,7 +9,7 @@
 5. Dewpoint: Calculate dew point, absolute moisture & vapor pressure from temperature & humidity
 6. OtaUpdatePOC: Proof of concept for an ESP image update strategy which uses the LastUpdate header field of the image to decide whether an update of the image should be done with OTA.
 7. findSensors: Search for active ESP sensors in subnet and display IP address, mac, hostname and an optional description
-8. manageESPs:
+8. manageESPs: some scripts to manage your ESPs
    * updateESPs.sh: Update binaries of all ESPs in local net which use EspMQTTClient and it's HTTPWebUpdater method
    * statusESPs.sh: Query status information of ESPs which use ESP8266WebServer to publish some status in JSON
 
