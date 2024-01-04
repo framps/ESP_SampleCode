@@ -6,7 +6,7 @@
 #
 #######################################################################################################################
 #
-#    Copyright (c) 2021 framp at linux-tips-and-tricks dot de
+#    Copyright (c) 2021-2024 framp at linux-tips-and-tricks dot de
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ fi
 # define defaults
 
 DEFAULT_SUBNETMASK="192.168.0.0/24"
-DEFAULT_MAC_REGEX="10:52:1C|24:62:AB|24:6f:28|24:A1:60|3C:61:05|48:3F:DA|A4:CF:12|BC:DD:C2|E0:98:06|E8:DB:84|F4:CF:A2|FC:F5:C4"
+DEFAULT_MAC_REGEX="10:52:1C|24:62:AB|24:6f:28|24:A1:60|3C:61:05|3C:71:BF|48:3F:DA|A4:CF:12|BC:DD:C2|CC:50:E3|E0:98:06|E8:DB:84|F4:CF:A2|FC:F5:C4"
 INI_FILENAME=$HOME/.${MYNAME}
 
 # help text
@@ -61,15 +61,15 @@ Usage:
 	$MYSELF                       Scan subnet $DEFAULT_SUBNETMASK for ESPs
 	$MYSELF <subnetmask>          Scan subnet for ESPs
 	$MYSELF -h | -? | --help      Show this help text
-	
-Defaults:	
+
+Defaults:
 	Subnetmask: $DEFAULT_SUBNETMASK
 	Mac regex:  $DEFAULT_MAC_REGEX
-	
-Example:	
+
+Example:
 	$MYSELF 192.168.179.0/24
-	
-Init file $INI_FILENAME can be used to customize the mac address scan and descriptions. 
+
+Init file $INI_FILENAME can be used to customize the mac address scan and descriptions.
 First optional line can be the regex for the macs to scan. See default above for an example.
 All following lines can contain a mac and a description separated by a space to add a meaningful
 description to the system which owns this mac. Otherwise the hostname discovered will used as the description.
@@ -78,26 +78,26 @@ description to the system which owns this mac. Otherwise the hostname discovered
 b8:27:eb|dc:a6:32|e4:5f:01
 b8:27:eb:b8:27:eb VPN Server
 b8:27:eb:b8:28:eb Web Server
-	
+
 EOH
 	exit 0
 fi
 
 # read options
 
-MY_NETWORK=${1:-$DEFAULT_SUBNETMASK}    
+MY_NETWORK=${1:-$DEFAULT_SUBNETMASK}
 
 # read property file with mac regexes
 
 MY_MAC_REGEX="$DEFAULT_MAC_REGEX"
 
 if [[ -f "$INI_FILENAME" ]]; then
-	MY_MAC_REGEX_FROM_INI="$(head -n 1 "$INI_FILENAME" | cut -f 2 -d " ")" 
+	MY_MAC_REGEX_FROM_INI="$(head -n 1 "$INI_FILENAME" | cut -f 2 -d " ")"
 	if [[ -z "$MY_MAC_REGEX_FROM_INI" ]]; then
 		echo "Using Mac Regex from $INI_FILENAME"
 		MY_MAC_REGEX="$(head -n 1 "$INI_FILENAME")"
 	fi
-fi	
+fi
 MY_MAC_REGEX=" (${MY_MAC_REGEX})"
 
 # define associative arrays for mac and hostname lookups
@@ -108,7 +108,7 @@ echo "Scanning subnet $MY_NETWORK for ESPs ..."
 
 # scan subnet for ESP macs
 
-# 192.168.0.12             ether   dc:a6:32:8f:28:fd   C                     wlp3s0 - 
+# 192.168.0.12             ether   dc:a6:32:8f:28:fd   C                     wlp3s0 -
 while read -r ip dummy mac rest; do
 	macAddress["$ip"]="$mac"
 done < <(nmap -sP "$MY_NETWORK" &>/dev/null; arp -n | grep -Ei " $MY_MAC_REGEX")
@@ -118,11 +118,11 @@ done < <(nmap -sP "$MY_NETWORK" &>/dev/null; arp -n | grep -Ei " $MY_MAC_REGEX")
 if (( ${#macAddress[@]} > 0 )); then
 
 	printf "\n%-15s %-17s %s\n" "IP address" "Mac address" "Hostname (Description)"
-	
-	IFS=$'\n' 
+
+	IFS=$'\n'
 	sorted=($(sort -t . -k 3,3n -k 4,4n <<< "${!macAddress[*]}"))
 	unset IFS
-	
+
 	for ip in "${sorted[@]}"; do
 		set +e
 		h="$(host "$ip")"
@@ -136,7 +136,7 @@ if (( ${#macAddress[@]} > 0 )); then
 			host=${host::-1} # delete trailing "."
 		fi
 
-		if [[ -z "$host" ]]; then	
+		if [[ -z "$host" ]]; then
 			host="Unknown"
 		fi
 
@@ -152,7 +152,7 @@ if (( ${#macAddress[@]} > 0 )); then
 		fi
 
 		printf "%-15s %17s %s\n" "$ip" "${macAddress[$ip]}" "$host"
-	done 
+	done
 else
 	echo "No ESPs found with mac regex $MY_MAC_REGEX"
 fi
