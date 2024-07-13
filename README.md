@@ -12,6 +12,7 @@
 8. manageESPs: some scripts to manage your ESPs
    * updateESPs.sh: Update binaries of all ESPs in local net which use EspMQTTClient and it's HTTPWebUpdater method
    * statusESPs.sh: Query status information of ESPs which use ESP8266WebServer to publish some status in JSON
+9. NotifyLetterDelivery: Sample sketch for an ESP32 which just requires a REED NO/NC switch to detect any new letters inserted in a mail box but no additional electronic HW but two pullup resistors. 
 
 ## findSensors.sh
 
