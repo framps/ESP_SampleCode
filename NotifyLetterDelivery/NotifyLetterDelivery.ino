@@ -170,8 +170,8 @@ void setup() {
   Serial.println("*****************************");
   Serial.println();
 
-  // pinMode(GPIO_FLAP_OPEN, INPUT_PULLUP);
-  // pinMode(GPIO_FLAP_CLOSED, INPUT_PULLUP);
+  // pinMode(GPIO_FLAP_OPEN, INPUT_PULLDOWN);
+  // pinMode(GPIO_FLAP_CLOSED, INPUT_PULLDOWN);
 
   print_GPIO_wake_up();
   print_wakeup_reason();
