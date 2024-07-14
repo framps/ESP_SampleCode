@@ -4,6 +4,11 @@
 // which allows a simple state machine to handle everything without any complex additional HW (just two 100k pullup 
 // resistors are needed for the two GPIOs used for NO and NC).
 //
+// States: 
+// FLAP_CLOSED: Enable open flap interupt and wait for letter -> FLAP_OPENED
+// FLAP_OPENED: flap was opened, if flap already closed start over -> FLAP_CLOSED, otherwise setup timer to check in 5 seconds whether flap was then closed -> FLAP_STILL_OPEN
+// FLAP_STILL_OPEN: flap is still open, wait for flap closed interupt -> FLAP_STILL_OPEN, if flap was close start over -> FLAP_CLOSED
+//
 // Code based on the Arduino example code for ESP32_ExternalWakeup
 //
 // Latest code available on https://github.com/framps/ESP_stuff/
