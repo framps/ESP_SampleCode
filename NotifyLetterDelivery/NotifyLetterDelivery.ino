@@ -1,10 +1,8 @@
 //
 // Sample sketch which uses a REED NO/NC switch to detect whether a new letter was inserted into the mailbox.
-// If an ESP8266 is used additional electronic hardware is required. An ESP32 is able to handle multiple interupts
-// which allows a simple state machine to handle everything without any complex additional HW (just two 100k pullup 
-// resistors are needed for the two GPIOs used for NO and NC).
+// Either EXT0 or EXT1 can be used so it can be used on a ESP8266 or ESP32.
 //
-// States: 
+// States:
 // FLAP_CLOSED: Enable open flap interupt and wait for letter -> FLAP_OPENED
 // FLAP_OPENED: flap was opened, if flap already closed start over -> FLAP_CLOSED, otherwise setup timer to check in 5 seconds whether flap was then closed -> FLAP_STILL_OPEN
 // FLAP_STILL_OPEN: flap is still open, wait for flap closed interupt -> FLAP_STILL_OPEN, if flap was close start over -> FLAP_CLOSED
@@ -35,8 +33,12 @@
 #######################################################################################################################
 */
 
+#define EXT0 // use EXT0 instead of EXT1
+
 #define GPIO_FLAP_CLOSED 33
-#define GPIO_FLAP_OPEN 15
+#define GPIO_FLAP_OPENED 15
+#define GPIO_33 GPIO_NUM_33
+#define GPIO_15 GPIO_NUM_15
 
 #define BUTTON_PIN_BITMASK_FLAP_CLOSED 0x200000000 /* 2^33 - GPIO33 */
 #define BUTTON_PIN_BITMASK_FLAP_OPENED 0x000008000 /* 2^15 - GPIO15 */
@@ -77,13 +79,21 @@ esp_sleep_wakeup_cause_t print_wakeup_reason() {
 */
 
 int print_GPIO_wake_up() {
+  int GPIO = -1;
+#ifdef EXT0
+  if ( flapOpen() ) {
+      GPIO=GPIO_FLAP_OPENED;
+  } else {
+      GPIO=GPIO_FLAP_CLOSED;
+  }
+#else
   int64_t GPIO_reason = esp_sleep_get_ext1_wakeup_status();
-  int GPIO;
   if ( GPIO_reason != 0 ) {
     GPIO = (log(GPIO_reason)) / log(2);
-    Serial.print("GPIO that triggered the wake up: GPIO ");
-    Serial.println(GPIO, 0);
   }
+#endif
+  Serial.print("GPIO that triggered the wake up: GPIO ");
+  Serial.println(GPIO, 0);
   return GPIO;
 }
 
@@ -92,8 +102,16 @@ int print_GPIO_wake_up() {
 */
 
 int flapOpen() {
-  return digitalRead(GPIO_FLAP_OPEN);
-}  
+  return digitalRead(GPIO_FLAP_OPENED);
+}
+
+/*
+  Return the state of the FLAP_CLOSED GPIO
+*/
+
+int flapClosed() {
+  return digitalRead(GPIO_FLAP_CLOSED);
+}
 
 /*
   Set state which is used when next interupt occurs
@@ -128,8 +146,12 @@ void state_flapClosed() {
       Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP) + " Seconds");
   } else {
     // enable flap open interupt
+#ifdef EXT0
+    esp_sleep_enable_ext0_wakeup(GPIO_15,1); //1 = High, 0 = Low
+#else
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-    Serial.println("> Waiting for flap to open ...");  
+#endif
+    Serial.println("> Waiting for flap to open ...");
     nextState(STATE_FLAP_OPENED);
   }
 }
@@ -140,10 +162,14 @@ void state_flapOpened() {
 
   if ( ! flapOpen() ) { // flap was closed very fast
       Serial.println("> Flap detected to be closed already :-)");
-      state_flapClosed();      
+      state_flapClosed();
   } else {
     // enable flap close interupt
+#ifdef EXT0
+    esp_sleep_enable_ext0_wakeup(GPIO_33,1); //1 = High, 0 = Low
+#else
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
+#endif
     // enable timer to detect flap is still open because of long mail which causes the flap to stay open until mail is removed
     esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
     Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP) + " Seconds");
@@ -157,9 +183,13 @@ void state_flapStillOpen() {
   if ( print_GPIO_wake_up() == GPIO_FLAP_CLOSED ) {
     Serial.println("> Flap closed interupt received :-)");
     state_flapClosed();
-  } else {  
+  } else {
     // flap still open, enable flap close interupt
+#ifdef EXT0
+    esp_sleep_enable_ext0_wakeup(GPIO_33,1); //1 = High, 0 = Low
+#else
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
+#endif
     Serial.println("> Waiting for flap to be closed ...");
   }
 }
@@ -178,11 +208,11 @@ void setup() {
   // pinMode(GPIO_FLAP_OPEN, INPUT_PULLDOWN);
   // pinMode(GPIO_FLAP_CLOSED, INPUT_PULLDOWN);
 
-  print_GPIO_wake_up();
   print_wakeup_reason();
+  print_GPIO_wake_up();
 
   Serial.print("Current state: "); printState(state); Serial.println();
-  
+
   switch (state) {
 
     case STATE_FLAP_CLOSED:
