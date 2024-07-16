@@ -3,9 +3,19 @@
 // Either EXT0 or EXT1 can be used so it can be used on a ESP8266 or ESP32.
 //
 // States:
+// INITIAL: System was restarted and waits for flap top be closed if it's open
 // FLAP_CLOSED: Enable open flap interupt and wait for letter -> FLAP_OPENED
 // FLAP_OPENED: flap was opened, if flap already closed start over -> FLAP_CLOSED, otherwise setup timer to check in 5 seconds whether flap was then closed -> FLAP_STILL_OPEN
 // FLAP_STILL_OPEN: flap is still open, wait for flap closed interupt -> FLAP_STILL_OPEN, if flap was close start over -> FLAP_CLOSED
+//
+// There may be interupts and state transitions not be detected because the ESP is not sleeping but not able to detect an interupt
+// 
+// Following race conditions exist:
+//
+// FLAP_CLOSED: Flap quickly opened and closed but closed interupt not received
+// FLAP_OPENED: Flap quickly closed and opened but opened interupt not received
+// FLAP_STILL_OPEN: Flap quickly closed and opened but opened interupt not received
+// All states first check for an external state change which may have been happened but was not detected and take care of the changed state
 //
 // Code based on the Arduino example code for ESP32_ExternalWakeup
 //
@@ -33,7 +43,9 @@
 #######################################################################################################################
 */
 
+/*
 #define EXT0 // use EXT0 instead of EXT1
+*/
 
 #define GPIO_FLAP_CLOSED 33
 #define GPIO_FLAP_OPENED 15
@@ -43,14 +55,15 @@
 #define BUTTON_PIN_BITMASK_FLAP_CLOSED 0x200000000 /* 2^33 - GPIO33 */
 #define BUTTON_PIN_BITMASK_FLAP_OPENED 0x000008000 /* 2^15 - GPIO15 */
 
-RTC_DATA_ATTR int state = 0;
+#define STATE_INITIAL 0
+#define STATE_FLAP_CLOSED 1
+#define STATE_FLAP_OPENED 2
+#define STATE_FLAP_STILL_OPEN 3
 
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
+RTC_DATA_ATTR int state = STATE_INITIAL;
 
-#define STATE_FLAP_CLOSED 0
-#define STATE_FLAP_OPENED 1
-#define STATE_FLAP_STILL_OPEN 2
+#define uS_TO_S_FACTOR 1000000              /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP_CHECK_OPEN  5         /* Time ESP32 will go to sleep (in seconds) to check if flap still open */
 
 /*
   Method to print the reason by which ESP32
@@ -127,6 +140,7 @@ void nextState(int nextState) {
 
 void printState(int state) {
   switch (state) {
+    case STATE_INITIAL: Serial.print("<INITIAL>"); break;
     case STATE_FLAP_CLOSED: Serial.print("<FLAP_CLOSED>"); break;
     case STATE_FLAP_OPENED: Serial.print("<FLAP_OPENED>"); break;
     case STATE_FLAP_STILL_OPEN: Serial.print("<FLAP_STILL_OPEN>"); break;
@@ -137,30 +151,51 @@ void printState(int state) {
   Code for the different states
 */
 
+// system booted
+
+void state_initial() {
+
+  if ( flapOpen() ) { 
+      Serial.println("> Flap detected to be open already :-)");
+    // enable flap closeinterupt
+  #ifdef EXT0
+    esp_sleep_enable_ext0_wakeup(GPIO_33,1); //1 = High, 0 = Low
+  #else
+    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
+  #endif
+    Serial.println("> Waiting for flap to close ...");
+    nextState(STATE_FLAP_CLOSED);
+  } else {
+    state_flapClosed();
+  }
+}
+
+// flap was closed, detected by closed interupt
+
 void state_flapClosed() {
 
-  if ( flapOpen() ) { // flap was open
-      Serial.println("> Flap hast to be closed first ...");
-      // enable timer to detect flap is closed and then enable opened interupt
-      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-      Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP) + " Seconds");
+  if ( flapOpen() ) { // flap was opened very fast
+      Serial.println("> Flap detected to be opened already :-)");
+      state_flapOpened();
   } else {
     // enable flap open interupt
-#ifdef EXT0
+  #ifdef EXT0
     esp_sleep_enable_ext0_wakeup(GPIO_15,1); //1 = High, 0 = Low
-#else
+  #else
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-#endif
+  #endif
     Serial.println("> Waiting for flap to open ...");
     nextState(STATE_FLAP_OPENED);
   }
 }
 
+// Flap was opened, deceted by opened interupt
+
 void state_flapOpened() {
 
   Serial.println("@@@ Mail received @@@");
 
-  if ( ! flapOpen() ) { // flap was closed very fast
+  if ( flapClosed() ) { // flap was closed very fast
       Serial.println("> Flap detected to be closed already :-)");
       state_flapClosed();
   } else {
@@ -171,17 +206,19 @@ void state_flapOpened() {
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
 #endif
     // enable timer to detect flap is still open because of long mail which causes the flap to stay open until mail is removed
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-    Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP) + " Seconds");
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_CHECK_OPEN * uS_TO_S_FACTOR);
+    Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP_CHECK_OPEN) + " Seconds");
     nextState(STATE_FLAP_STILL_OPEN);
   }
 }
 
+// flap is still open, detected by timer interupt or close interupt
+
 void state_flapStillOpen() {
 
-  // flap was closed by interupt
-  if ( print_GPIO_wake_up() == GPIO_FLAP_CLOSED ) {
-    Serial.println("> Flap closed interupt received :-)");
+  // flap was closed by interupt or is detected by timer
+  if ( flapClosed() ) {
+    Serial.println("> Flap closed detected :-)");
     state_flapClosed();
   } else {
     // flap still open, enable flap close interupt
@@ -191,6 +228,8 @@ void state_flapStillOpen() {
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
 #endif
     Serial.println("> Waiting for flap to be closed ...");
+    
+    nextState(STATE_FLAP_STILL_OPEN);
   }
 }
 
@@ -214,6 +253,10 @@ void setup() {
   Serial.print("Current state: "); printState(state); Serial.println();
 
   switch (state) {
+
+    case STATE_INITIAL:
+      state_initial();
+      break;
 
     case STATE_FLAP_CLOSED:
       state_flapClosed();
