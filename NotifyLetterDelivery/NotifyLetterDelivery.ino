@@ -3,12 +3,13 @@
 // Either EXT0 or EXT1 can be used so it can be used on a ESP8266 or ESP32.
 //
 // States:
-// INITIAL: System was restarted and waits for flap top be closed if it's open
-// FLAP_CLOSED: Enable open flap interupt and wait for letter -> FLAP_OPENED
-// FLAP_OPENED: flap was opened, if flap already closed start over -> FLAP_CLOSED, otherwise setup timer to check in 5 seconds whether flap was then closed -> FLAP_STILL_OPEN
-// FLAP_STILL_OPEN: flap is still open, wait for flap closed interupt -> FLAP_STILL_OPEN, if flap was close start over -> FLAP_CLOSED
 //
-// There may be interupts and state transitions not be detected because the ESP is not sleeping but not able to detect an interupt
+// INITIAL: System was restarted and waits for flap top be closed if it's open
+// FLAP_CLOSED: Enable open flap interupt and wait for letter -> change state to FLAP_OPENED
+// FLAP_OPENED: flap was opened -> change state to FLAP_STILL_OPEN
+// FLAP_STILL_OPEN: flap is still open, wait for flap closed interupt -> stay in state FLAP_STILL_OPEN, if flap was close start over -> change state to FLAP_CLOSED
+//
+// There may be interupts and state transitions not be detected because the ESP is not sleeping but not able to detect an interupt. These interupt holes are mitigated.
 // 
 // Following race conditions exist:
 //
@@ -155,28 +156,35 @@ void printState(int state) {
 
 void state_initial() {
 
+  // no interupt happend
+  // just check whether flap is open
+
   if ( flapOpen() ) { 
-      Serial.println("> Flap detected to be open already :-)");
-    // enable flap closeinterupt
+      Serial.println("> Open flap detected :-)");
+	  // now enable flap closeinterupt
   #ifdef EXT0
     esp_sleep_enable_ext0_wakeup(GPIO_33,1); //1 = High, 0 = Low
   #else
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
   #endif
-    Serial.println("> Waiting for flap to close ...");
+    Serial.println("> Waiting now for flap close interupt ...");
     nextState(STATE_FLAP_CLOSED);
   } else {
+	// assume now flap is clsed
     state_flapClosed();
   }
 }
 
-// flap was closed, detected by closed interupt
+// flap was closed
 
 void state_flapClosed() {
 
+  // detected by closed interupt or set by initial state
+  // assumes flap was open previously
+
   if ( flapOpen() ) { // flap was opened very fast
-      Serial.println("> Flap detected to be opened already :-)");
-      state_flapOpened();
+      Serial.println("> Open flap detected :-)");
+      state_flapOpened(); // change state to opened
   } else {
     // enable flap open interupt
   #ifdef EXT0
@@ -184,20 +192,20 @@ void state_flapClosed() {
   #else
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
   #endif
-    Serial.println("> Waiting for flap to open ...");
+    Serial.println("> Waiting for flap open interupt ...");
     nextState(STATE_FLAP_OPENED);
   }
 }
 
-// Flap was opened, deceted by opened interupt
+// Flap was opened, deceted by opened interupt, wait for closed interupt or timer
 
 void state_flapOpened() {
 
   Serial.println("@@@ Mail received @@@");
 
-  if ( flapClosed() ) { // flap was closed very fast
+  if ( flapClosed() ) { // flap was closed 
       Serial.println("> Flap detected to be closed already :-)");
-      state_flapClosed();
+      state_flapClosed(); // change state to closed
   } else {
     // enable flap close interupt
 #ifdef EXT0
@@ -207,7 +215,7 @@ void state_flapOpened() {
 #endif
     // enable timer to detect flap is still open because of long mail which causes the flap to stay open until mail is removed
     esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_CHECK_OPEN * uS_TO_S_FACTOR);
-    Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP_CHECK_OPEN) + " Seconds");
+    Serial.println("Setup watchTimer to wake up in " + String(TIME_TO_SLEEP_CHECK_OPEN) + " seconds");
     nextState(STATE_FLAP_STILL_OPEN);
   }
 }
@@ -216,10 +224,10 @@ void state_flapOpened() {
 
 void state_flapStillOpen() {
 
-  // flap was closed by interupt or is detected by timer
   if ( flapClosed() ) {
-    Serial.println("> Flap closed detected :-)");
+    Serial.println("> Flap detected to be closed already :-)");
     state_flapClosed();
+  // flap was closed by interupt or is detected by timer
   } else {
     // flap still open, enable flap close interupt
 #ifdef EXT0
@@ -247,8 +255,10 @@ void setup() {
   // pinMode(GPIO_FLAP_OPEN, INPUT_PULLDOWN);
   // pinMode(GPIO_FLAP_CLOSED, INPUT_PULLDOWN);
 
-  print_wakeup_reason();
-  print_GPIO_wake_up();
+  int wakeupReason = print_wakeup_reason();
+  if ( wakeupReason == ESP_SLEEP_WAKEUP_EXT0 || wakeupReason == ESP_SLEEP_WAKEUP_EXT1 ) {
+    print_GPIO_wake_up();
+  }
 
   Serial.print("Current state: "); printState(state); Serial.println();
 
