@@ -1,9 +1,10 @@
 //
 // Sample sketch which uses two REED NO/NC switches to detect whether a new letter was inserted into the mailbox.
-// Given two GPIOs are uses in parallel to wakeup the ESP EXT1 is used and thus the code runs on an ESP32 only
 //
-// Requirement: 2 REED NO/NC contacts - one to detect flap open/close and one to detect door open to reset eMail notification
-// Flap may stay opened if a long eMail causes the flap to stay open and no notification is sent until the door is opened 
+// Sketch can run on ESP8266 with EXT0 or ESP32 with EXT1
+//
+// Requirement: 1 REED NO/NC contact to detect flap open/close 
+// Flap can stay open if a long eMail causes the flap to stay open and no notification is sent until the flap is close again
 //
 // Code based on the Arduino example code for ESP32_ExternalWakeup
 //
@@ -29,266 +30,253 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #######################################################################################################################
-*/
+ */
+
+#define ESP8266 // EXT0 is used instead of EXT1
+
+#define OPEN 1
+#define CLOSED 0
 
 #define GPIO_FLAP_CLOSED 33
 #define GPIO_FLAP_OPENED 15
-#define GPIO_DOOR_OPENED 32
-#define GPIO_33_NUM GPIO_NUM_33
-#define GPIO_15_NUM GPIO_NUM_15
-#define GPIO_32_NUM GPIO_NUM_32
+#define GPIO_FLAP_CLOSED_NUM GPIO_NUM_33
+#define GPIO_FLAP_OPENED_NUM GPIO_NUM_15
 
 #define BUTTON_PIN_BITMASK_FLAP_CLOSED 0x200000000 /* 2^33 - GPIO33 */
-#define BUTTON_PIN_BITMASK_DOOR_OPENED 0x100000000 /* 2^32 - GPIO32 */
 #define BUTTON_PIN_BITMASK_FLAP_OPENED 0x000008000 /* 2^15 - GPIO15 */
 
 RTC_DATA_ATTR int state = 0;
-RTC_DATA_ATTR int notified = 0;
 
-int newState;
-int wakeupReason;
-int gpio;
+int newState;   // state detected when woken up which may be different than the state when entering deep sleep
+int wakeupReason; // time, boot or GPIO interupt
+int gpio;       // gpio which caused the wakeup if an EXT0 or EXT1 was raised
 
 #define uS_TO_S_FACTOR 1000000              /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP_CHECK_OPEN  5         /* Time ESP32 will go to sleep (in seconds) to check if flap still open */
+#define TIME_TO_SLEEP_CHECK_OPEN  5         /* Time ESP will go to sleep (in seconds) to check if flap still open */
 
 /*
-  Return and optionally print the reason by which ESP32
-  has been awaken from sleep
-*/
+   Return and optionally print the reason by which ESP32
+   has been awaken from sleep
+ */
 esp_sleep_wakeup_cause_t wakeup_reason(int print) {
 
-  esp_sleep_wakeup_cause_t wakeup_reason;
+    esp_sleep_wakeup_cause_t wakeup_reason;
 
-  wakeup_reason = esp_sleep_get_wakeup_cause();
+    wakeup_reason = esp_sleep_get_wakeup_cause();
 
-  if ( print ) {
-    switch (wakeup_reason)
-    {
-      case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-      case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
-      case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
-      case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
-      case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
-      default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
+    if ( print ) {
+        switch (wakeup_reason)
+        {
+            case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+            case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+            case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+            case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+            case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+            default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
+        }
     }
-  }
-  return wakeup_reason;
+    return wakeup_reason;
 }
 
 /*
-  Return and optionally print the GPIO which caused the interupt
-*/
+   Return and optionally print the GPIO which caused the wakeup
+ */
 
 int GPIO_wake_up(int print) {
-  int GPIO = -1;
-  int64_t GPIO_reason = esp_sleep_get_ext1_wakeup_status();
-  if ( GPIO_reason == ESP_SLEEP_WAKEUP_EXT0 || GPIO_reason == ESP_SLEEP_WAKEUP_EXT1 ) {
-    GPIO = (log(GPIO_reason)) / log(2);
-  }
-  if ( print ) {
-    if ( GPIO != -1 ) {
-      Serial.print("GPIO that triggered the wake up: GPIO ");
-      Serial.println(GPIO, 0);    
+    int GPIO = -1;
+#ifdef ESP8266
+    if ( flapOpen() ) {
+        GPIO = GPIO_FLAP_OPENED;
     } else {
-      Serial.println("Wake up not trigger by GPIO");
+        GPIO = GPIO_FLAP_CLOSED;
     }
-  }
-  return GPIO;
+#else  
+    int64_t GPIO_reason = esp_sleep_get_ext1_wakeup_status();
+    if ( GPIO_reason != 0 ) {
+        GPIO = (log(GPIO_reason)) / log(2);
+    }
+#endif
+
+    if ( print ) {
+        if ( GPIO != -1 ) {
+            Serial.print("GPIO that triggered the wake up: GPIO ");
+            Serial.println(GPIO, 0);    
+        } else {
+            Serial.println("Wake up not trigger by GPIO");
+        }
+    }
+    return GPIO;
 }
 
-/*
-  Return the state of the FLAP_OPEN GPIO
-*/
+void printState(int state) {
+    if ( state ) {
+        Serial.println("<OPEN>");
+    } else {
+        Serial.println("<CLOSED>");
+    }    
+}
+
+void enableFlapClosedWakeup() {
+    Serial.println("> Enabling flap closed wakeup ...");
+#ifdef ESP8266      
+    esp_sleep_enable_ext0_wakeup(GPIO_FLAP_CLOSED_NUM, 1);
+#else
+    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED, ESP_EXT1_WAKEUP_ANY_HIGH);
+#endif      
+}
+
+void enableFlapOpenedWakeup() {
+    Serial.println("> Enabling flap opened wakeup ...");
+#ifdef ESP8266      
+    esp_sleep_enable_ext0_wakeup(GPIO_FLAP_OPENED_NUM, 1);
+#else
+    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
+#endif      
+}
+
+void enableFlapStillOpenDetectTimer() {
+    // enable timer to detect flap is still open because of long mail which causes the flap to stay open until mail is removed
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_CHECK_OPEN * uS_TO_S_FACTOR);
+    Serial.println("Setup watchTimer to wake up in " + String(TIME_TO_SLEEP_CHECK_OPEN) + " seconds");  
+}
 
 int flapOpen() {
-  return digitalRead(GPIO_FLAP_OPENED);
+    return digitalRead(GPIO_FLAP_OPENED);
 }
 
 /*
-  Return the state of the FLAP_CLOSED GPIO
-*/
+ * Notify a new mail was received
+ */
 
-int doorOpen() {
-  return digitalRead(GPIO_DOOR_OPENED);
-}
-
-void notifyEmail() {
-  if ( ! notified ) {
-    Serial.println("@@@ Mail received @@@");  
-    notified=1;
-  }
-}
-
-void resetNotifyEmail() {
-  Serial.println("@@ Mail notify reset @@@");  
-  notified=0;
+void notifyNewMail() {
+    Serial.println("@@@ New mail received @@@");  
 }
 
 // system booted
 
 void initialState() {
 
-  Serial.println("*** Initializing ***");
+    Serial.println("--- initialState ---");
 
-  state = flapOpen();
+    state = flapOpen();
 
-	if ( state ) { 
-      Serial.println("> Open flap detected :-)");
-      Serial.println("> Waiting for flap closed interupt ...");
-      esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED | BUTTON_PIN_BITMASK_DOOR_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-	} else {
-      Serial.println("> Waiting for flap opened interupt ...");
-      esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED | BUTTON_PIN_BITMASK_DOOR_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-	}
+    if ( state ) { 
+        Serial.println("> Open flap detected :-)");
+        enableFlapClosedWakeup();
+    } else {
+        Serial.println("> Closed flap detected :-)");
+        enableFlapOpenedWakeup();
+    }
 }
 
 void flapOpenToClose(int newState) {
-  
-  Serial.println("--- flapOpenToClose ---");
 
-  int doorOpenedBit=0;
+    Serial.println("--- flapOpenToClose ---");
 
-  if ( doorOpen() ) {
-    resetNotifyEmail();
-    doorOpenedBit = BUTTON_PIN_BITMASK_DOOR_OPENED;
-  }
-
-  if ( newState ) {
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED | doorOpenedBit, ESP_EXT1_WAKEUP_ANY_HIGH);
-    Serial.println("> Waiting for flap closed interupt ...");
-  } else {
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED | doorOpenedBit, ESP_EXT1_WAKEUP_ANY_HIGH);
-    Serial.println("> Waiting for flap open interupt ...");
-  }    
+    if ( newState ) {
+        enableFlapClosedWakeup();
+    } else {
+        enableFlapOpenedWakeup();
+    }    
 }
 
 void flapCloseToOpen(int newState) {
 
-  Serial.println("--- flapCloseToOpen ---");
+    Serial.println("--- flapCloseToOpen ---");
 
-  if ( doorOpen() ) {
-    resetNotifyEmail();
-  } else {
     notifyEmail();
-    // enable timer to detect flap is still open because of long mail which causes the flap to stay open until mail is removed
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_CHECK_OPEN * uS_TO_S_FACTOR);
-    Serial.println("Setup watchTimer to wake up in " + String(TIME_TO_SLEEP_CHECK_OPEN) + " seconds");
-  }
 
-  // enable flap close interupt
-  esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED | BUTTON_PIN_BITMASK_DOOR_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-    
+    enableFlapStillOpenDetectTimer();
+    enableFlapClosedWakeup();    
 }
 
 void flapCloseToClose(int newState) {
 
-  Serial.println("--- flapCloseToClose ---");
+    Serial.println("--- flapCloseToClose ---");
 
-  if ( doorOpen() ) {
-    resetNotifyEmail();
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-  } else if (wakeupReason != ESP_SLEEP_WAKEUP_TIMER ) {
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_OPENED | BUTTON_PIN_BITMASK_DOOR_OPENED, ESP_EXT1_WAKEUP_ANY_HIGH);
-		notifyEmail();
-	}
+    if (wakeupReason != ESP_SLEEP_WAKEUP_TIMER ) {
+        enableFlapOpenedWakeup();
+        notifyEmail();
+    }
 }
 
 void flapOpenToOpen(int newState) {
 
     Serial.println("--- flapOpenToOpen ---");
 
-    int doorOpenedBit=0;
-
-    if ( doorOpen() ) {
-      resetNotifyEmail();
-    } else {
-       doorOpenedBit = BUTTON_PIN_BITMASK_DOOR_OPENED;
-    }
-
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK_FLAP_CLOSED | doorOpenedBit, ESP_EXT1_WAKEUP_ANY_HIGH);
-    Serial.println("> Waiting for flap to be closed ...");    
-  }
-
-void flapWasInStateClosed(int newState) {
-
-  switch (newState) {
-
-	case 0:
-	  flapCloseToClose(newState);
-	  break;
-
-	case 1:
-	  flapCloseToOpen(newState);
-	  break;
-	}
+    enableFlapClosedWakeup();
 }
-	
 
-void flapWasInStateOpened(int newState) {
-
-  switch (newState) {
-
-	case 0:
-	  flapOpenToClose(newState);
-	  break;
-
-	case 1:
-	  flapOpenToOpen(newState);
-	  break;
-	}
-}
-	
 
 /*
-  Check which state is active and call according function
-*/
+   Check which state is active now and call function which handles the new state
+ */
 
 void setup() {
-  Serial.begin(115200);
-  delay(1000); //Take some time to open up the Serial Monitor
 
-  Serial.println("*****************************");
-  Serial.println();
+    Serial.begin(115200);
+    delay(1000); //Take some time to open up the Serial Monitor
 
-  int newState = flapOpen();
+    Serial.println("*****************************");
+    Serial.println();
 
-  Serial.print("Current state: "); Serial.println(state);
-  Serial.print("New state: "); Serial.println(newState);
+    int newState = flapOpen();
 
-  gpio = GPIO_wake_up(1);
+    Serial.print("Last state: "); printState(state);
+    Serial.print("Current state: "); printState(newState);
 
-  wakeupReason = wakeup_reason(1);
-  if ( ! ( wakeupReason == ESP_SLEEP_WAKEUP_EXT1 || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
-	
-	  initialState();
-	  
-  } else {
+    gpio = GPIO_wake_up(1);
 
-	  switch (state) {
+    wakeupReason = wakeup_reason(1);
+#ifndef ESP8266  
+    if ( ! ( wakeupReason == ESP_SLEEP_WAKEUP_EXT1 || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
+#else
+        if ( ! ( wakeupReason == ESP_SLEEP_WAKEUP_EXT0 || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
+#endif    
 
-		case 0:
-		  flapWasInStateClosed(newState);
-		  break;
+            initialState();
 
-		case 1:
-		  flapWasInStateOpened(newState);
-		  break;
+        } else {
 
-	  }
-	}
-	
-  state = newState;
+            switch (state) {
+                case CLOSED:
+                    switch (newState) {
+                        case CLOSED:
+                            flapCloseToClose(newState);
+                            break;
 
-  //Go to sleep now
-  Serial.print("Next state: "); Serial.println(newState);
-  Serial.println("Going to sleep now");
-  Serial.println("");
+                        case OPEN:
+                            flapCloseToOpen(newState);
+                            break;
+                    }
+                    break;
 
-  esp_deep_sleep_start();
-  Serial.println("This will never be printed");
-}
+                case OPEN:
+                    switch (newState) {        
+                        case CLOSED:
+                            flapOpenToClose(newState);
+                            break;
 
-void loop() {
-  //This is not going to be called
-}
+                        case OPEN:
+                            flapOpenToOpen(newState);
+                            break;
+                    }
+                    break;
+
+            }
+        }
+
+        state = newState;
+
+        //Go to sleep now
+        Serial.print("Next state: "); printState(newState);
+        Serial.println("Going to sleep now");
+        Serial.println("");
+
+        esp_deep_sleep_start();
+        Serial.println("This will never be printed");
+    }
+
+    void loop() {
+        //This is not going to be called
+    }
