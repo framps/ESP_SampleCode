@@ -1,5 +1,5 @@
 //
-// Sample sketch which uses two REED NO/NC switches to detect whether a new letter was inserted into the mailbox.
+// Sample sketch which uses a REED NO/NC switch to detect a new letter was inserted into the mailbox
 //
 // Sketch can run on ESP8266 with EXT0 or ESP32 with EXT1
 //
