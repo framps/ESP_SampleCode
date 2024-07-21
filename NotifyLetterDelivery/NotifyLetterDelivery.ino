@@ -32,6 +32,8 @@
 #######################################################################################################################
  */
 
+#include <PushoverESP32.h>
+
 #define ESP8266 // EXT0 is used instead of EXT1
 
 #define OPEN 1
@@ -53,7 +55,7 @@ int gpio;       // gpio which caused the wakeup if an EXT0 or EXT1 was raised
 
 #define uS_TO_S_FACTOR 1000000              /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP_CHECK_OPEN  5         /* Time ESP will go to sleep (in seconds) to check if flap still open */
-
+    
 /*
    Return and optionally print the reason by which ESP32
    has been awaken from sleep
@@ -149,7 +151,25 @@ int flapOpen() {
  */
 
 void notifyNewMail() {
+
     Serial.println("@@@ New mail received @@@");  
+
+/*
+    connectToWlan();
+
+    char* token = "";
+    char* user = "";
+
+    Pushover pushoverClient(token, user);
+
+    PushoverMessage myMessage;
+    
+    myMessage.title = "New Mail received";
+    pushoverClient.send(myMessage);
+
+    disconnectFromWlan();
+*/    
+      
 }
 
 // system booted
@@ -184,7 +204,7 @@ void flapCloseToOpen(int newState) {
 
     Serial.println("--- flapCloseToOpen ---");
 
-    notifyEmail();
+    notifyNewMail();
 
     enableFlapStillOpenDetectTimer();
     enableFlapClosedWakeup();    
@@ -196,7 +216,7 @@ void flapCloseToClose(int newState) {
 
     if (wakeupReason != ESP_SLEEP_WAKEUP_TIMER ) {
         enableFlapOpenedWakeup();
-        notifyEmail();
+        notifyNewMail();
     }
 }
 
