@@ -32,7 +32,13 @@
 #######################################################################################################################
  */
 
+/*
+# define USE_PUSHOVER
+*/
+
+#ifdef USE_PUSHOVER
 #include <PushoverESP32.h>
+#endif
 
 #define ESP8266 // EXT0 is used instead of EXT1
 
@@ -154,7 +160,7 @@ void notifyNewMail() {
 
     Serial.println("@@@ New mail received @@@");  
 
-/*
+#ifdef USE_PUSHOVER
     connectToWlan();
 
     char* token = "";
@@ -168,8 +174,7 @@ void notifyNewMail() {
     pushoverClient.send(myMessage);
 
     disconnectFromWlan();
-*/    
-      
+#endif      
 }
 
 // system booted
