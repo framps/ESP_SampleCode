@@ -59,6 +59,13 @@ int newState;   // state detected when woken up which may be different than the 
 int wakeupReason; // time, boot or GPIO interupt
 int gpio;       // gpio which caused the wakeup if an EXT0 or EXT1 was raised
 
+int sleepWakeup =
+#ifdef ESP_SLEEP_WAKEUP_EXT0
+  ESP_SLEEP_WAKEUP_EXT0;
+#else  
+  ESP_SLEEP_WAKEUP_EXT1;
+#endif  
+
 #define uS_TO_S_FACTOR 1000000              /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP_CHECK_OPEN  5         /* Time ESP will go to sleep (in seconds) to check if flap still open */
     
@@ -253,12 +260,7 @@ void setup() {
     gpio = GPIO_wake_up(1);
 
     wakeupReason = wakeup_reason(1);
-#ifndef ESP8266  
-    if ( ! ( wakeupReason == ESP_SLEEP_WAKEUP_EXT1 || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
-#else
-        if ( ! ( wakeupReason == ESP_SLEEP_WAKEUP_EXT0 || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
-#endif    
-
+    if ( ! ( wakeupReason == sleepWakeup || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
             initialState();
 
         } else {
