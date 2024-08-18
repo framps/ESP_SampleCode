@@ -40,7 +40,9 @@
 #include <PushoverESP32.h>
 #endif
 
-#define ESP8266 // EXT0 is used instead of EXT1
+#ifdef ESP_SLEEP_WAKEUP_EXT0
+  #define ESP8266 // EXT0 is used instead of EXT1
+#endif
 
 #define OPEN 1
 #define CLOSED 0
@@ -57,10 +59,10 @@ RTC_DATA_ATTR int state = 0;
 
 int newState;   // state detected when woken up which may be different than the state when entering deep sleep
 int wakeupReason; // time, boot or GPIO interupt
-int gpio;       // gpio which caused the wakeup if an EXT0 or EXT1 was raised
+int gpioCausedWakeup;       // gpio which caused the wakeup if an EXT0 or EXT1 was raised
 
 int sleepWakeup =
-#ifdef ESP_SLEEP_WAKEUP_EXT0
+#ifdef ESP_8266
   ESP_SLEEP_WAKEUP_EXT0;
 #else  
   ESP_SLEEP_WAKEUP_EXT1;
@@ -257,12 +259,12 @@ void setup() {
     Serial.print("Last state: "); printState(state);
     Serial.print("Current state: "); printState(newState);
 
-    gpio = GPIO_wake_up(1);
+    gpioCausedWakeup = GPIO_wake_up(1);
 
     wakeupReason = wakeup_reason(1);
     if ( ! ( wakeupReason == sleepWakeup || wakeupReason == ESP_SLEEP_WAKEUP_TIMER ) ) {
             initialState();
-
+            
         } else {
 
             switch (state) {
@@ -301,7 +303,6 @@ void setup() {
         Serial.println("");
 
         esp_deep_sleep_start();
-        Serial.println("This will never be printed");
     }
 
     void loop() {
